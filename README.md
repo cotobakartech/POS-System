@@ -127,4 +127,6 @@ python server.py
 - **Thermal Printer**: Pastikan printer sudah di-set sebagai **Default Printer** di Windows.
 
 ---
-© 2026 **PT Bikin Orang Sukses (BOS)**. All Rights Reserved.
+© 2026 **PT Bikin Orang Sukses (BOS)**.
+Developed & Supported by **Cotobakartech (Muh Alif Arkan)**.
+All Rights Reserved.
