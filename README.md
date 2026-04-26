@@ -2,149 +2,102 @@
 
 **Cafe BOS (Bikin Orang Sukses)** adalah sistem manajemen kafe terintegrasi yang dirancang khusus untuk efisiensi operasional, mulai dari pemesanan pelanggan hingga laporan keuangan otomatis dan absensi berbasis AI.
 
+![Admin Dashboard](docs/img/admin.png)
+
 ---
 
 ## 🌟 Fitur Utama
 
 ### 1. 📋 Sistem Pemesanan (Waiter & Customer)
+![Home Menu](docs/img/home.png)
+- **Interface Responsif**: Desain modern yang optimal di HP pelanggan maupun tablet waiter.
+- **Customization**: Pelanggan dapat memilih tingkat gula, es, dan topping secara mandiri.
+- **Real-time Pending Orders**: Dashboard kasir akan otomatis terupdate setiap ada pesanan baru yang masuk.
 
-- **Interface Responsif**: Dapat diakses melalui smartphone pelanggan atau tablet waiter.
-- **Customization**: Pilihan tingkat gula, es, dan topping untuk setiap menu.
-- **Real-time Pending Orders**: Pesanan yang masuk akan langsung muncul di dashboard kasir.
+### 2. 👤 Sistem Absensi Wajah (AI Face Recognition)
+![Attendance Portal](docs/img/absensi.png)
+- **Face Recognition**: Menggunakan MediaPipe untuk autentikasi karyawan tanpa PIN.
+- **Auto-Mirroring**: Pengalaman selfie yang natural saat proses absensi.
+- **Smart Logic**: Sistem secara cerdas membedakan jam masuk (08:00 - 21:59) dan jam pulang (22:00 - 23:59).
 
-### 2. 🤖 AI Assistant (Gemini AI Integration)
+### 3. 📊 Laporan & Analitik Bisnis
+![Management Hub](docs/img/reports.png)
+- **Automated Reports**: Generate laporan harian dalam format Excel dan PDF secara instan.
+- **Analytics Dashboard**: Visualisasi data penjualan 30 hari terakhir dan menu terlaris.
+- **Cloud Backup**: Seluruh laporan otomatis dicadangkan ke Google Drive setiap hari.
 
-- Fitur chatbot cerdas untuk melayani pertanyaan pelanggan seputar menu, reservasi, dan informasi Cafe BOS.
-- Terintegrasi langsung dengan data menu terbaru dari database.
+### 4. 📦 Manajemen Inventaris & Resep
+- **Auto-Deduction**: Stok bahan baku otomatis berkurang setiap kali pesanan diselesaikan (berdasarkan rekap resep).
+- **Stock Alert**: Pantau sisa bahan baku langsung dari dashboard inventory.
 
-### 3. 👤 Sistem Absensi Wajah (Face Recognition)
-
-- Menggunakan **MediaPipe** untuk pengenalan wajah karyawan yang akurat.
-- **Auto-Mirroring**: Tampilan kamera yang natural saat absen.
-- **Smart Window**: Pembatasan jam masuk (08:00-21:59) dan jam pulang (22:00-23:59).
-
-### 4. 📊 Manajemen Inventaris & Resep
-
-- Pelacakan stok bahan baku secara real-time.
-- **Potong Stok Otomatis**: Setiap pesanan yang selesai akan otomatis mengurangi stok bahan baku berdasarkan resep yang telah diatur.
-
-### 5. 💰 Laporan Keuangan & Cloud Backup
-
-- **Multi-Metode Pembayaran**: Mendukung Cash dan QRIS.
-- **Generate Report**: Laporan harian dalam format **Excel** dan **PDF** yang estetik.
-- **Auto-Sync Google Drive**: Mencadangkan laporan harian secara otomatis ke cloud.
-
-### 6. 🖨️ Thermal Printing
-
-- Cetak struk otomatis ke printer thermal default Windows.
-- Format struk yang profesional dengan detail PPN dan pembulatan.
+### 5. 🤖 AI Assistant (Gemini AI)
+- Integrasi chatbot cerdas yang memahami seluruh menu dan informasi Cafe BOS untuk melayani tanya jawab pelanggan secara otomatis.
 
 ---
 
 ## 🛠️ Teknologi yang Digunakan
 
 - **Backend**: Python (Flask Framework)
-- **Server**: Waitress (Mode Produksi di Port 80)
+- **Server**: Waitress (High Performance Production Server)
 - **Database**: SQLite
 - **AI/ML**: MediaPipe (Face Mesh), Google Gemini AI API
-- **Cloud**: Google Drive API, Cloudflare Tunnel, Ngrok
-- **Frontend**: HTML5, Vanilla CSS, JavaScript
+- **Cloud**: Google Drive API, Cloudflare Tunnel (Akses Remote Aman)
+- **Frontend**: HTML5, Vanilla CSS (Glassmorphism), JavaScript
 
 ---
 
 ## 🚀 Panduan Instalasi
 
 ### 1. Persyaratan Sistem
+- Python 3.9+
+- Koneksi internet (untuk AI & Cloud Backup)
+- Sistem Operasi Windows (untuk fitur Thermal Printing)
 
-- Python 3.9 atau lebih baru.
-- Koneksi internet (untuk API Gemini & GDrive).
-- Printer Thermal (Opsional).
-
-### 2. Langkah-Langkah Instalasi
-
+### 2. Langkah Instalasi
 1. **Clone Repositori**:
-
    ```bash
    git clone https://github.com/cotobakartech/cafe_bos.git
    cd cafe_bos
    ```
-2. **Buat Virtual Environment**:
-
+2. **Setup Environment**:
    ```bash
    python -m venv venv
    venv\Scripts\activate
-   ```
-3. **Install Dependensi**:
-
-   ```bash
    pip install -r requirements.txt
    ```
-4. **Inisialisasi Database**:
-   Jalankan script `app.py` sekali untuk membuat file `database.db` secara otomatis.
-
-   ```bash
-   python app.py
-   ```
-
----
-
-## ⚙️ Konfigurasi API
-
-### 1. Gemini AI
-
-Dapatkan API Key di [Google AI Studio](https://aistudio.google.com/) dan masukkan ke dalam variabel `GEMINI_API_KEY` di `app.py`.
-
-### 2. Google Drive Backup
-
-1. Aktifkan Drive API di Google Cloud Console.
-2. Unduh `credentials.json` dan letakkan di root folder.
-3. Saat dijalankan pertama kali, sistem akan meminta otorisasi dan menyimpan `token.json`.
+3. **Konfigurasi API**:
+   - Masukkan `GEMINI_API_KEY` di `app.py`.
+   - Letakkan `credentials.json` (Google Drive) di root folder.
 
 ---
 
 ## 🖥️ Cara Menjalankan
 
-### Mode Windows (Rekomendasi)
+### Cara Cepat (Windows)
+Cukup klik dua kali pada file **`jalankan_kasir.bat`**. Script ini akan otomatis menjalankan server, Cloudflare tunnel, dan Ngrok secara bersamaan.
 
-Klik dua kali pada file `jalankan_kasir.bat`. File ini akan otomatis menjalankan:
-
-1. Server Flask (Waitress) di Port 80.
-2. Cloudflare Tunnel untuk akses remote.
-3. Ngrok sebagai backup akses remote.
-
-### Mode Manual
-
+### Cara Manual
 ```bash
 python server.py
 ```
 
 ---
 
-## 📂 Struktur Folder Utama
-
-- `app.py`: Logika utama aplikasi, route, dan integrasi AI.
-- `server.py`: Konfigurasi production server menggunakan Waitress.
-- `pdf_generator.py`: Modul khusus pembuat laporan PDF.
-- `templates/`: File HTML untuk antarmuka pengguna.
-- `static/`: Aset gambar, CSS, JS, dan hasil laporan.
-- `database.db`: Database SQLite (Auto-generated).
+## 📂 Struktur Folder
+- `app.py`: Backend logic & API Routes.
+- `pdf_generator.py`: Modul pembuatan laporan PDF.
+- `templates/`: UI Files (HTML).
+- `static/`: Assets (CSS, JS, Images, Uploads).
+- `docs/img/`: Dokumentasi visual sistem (Real Screenshots).
 
 ---
 
 ## 👤 Akun Admin Default
-
 - **Username**: `@SuksesBOS`
 - **Password**: `123456789`
 
 ---
 
-## 📝 Catatan Penting
-
-- **Port 80**: Pastikan tidak ada aplikasi lain (seperti XAMPP/Apache) yang menggunakan port 80 agar `server.py` bisa berjalan.
-- **Thermal Printer**: Pastikan printer sudah di-set sebagai **Default Printer** di Windows.
-
----
-
 © 2026 **PT Bikin Orang Sukses (BOS)**.
-Developed & Supported by **Cotobakartech (Muh Alif Arkan Baharuddin)**.
+Developed & Supported by **Cotobakartech**.
 All Rights Reserved.
