@@ -1,0 +1,317 @@
+{# Menu categories are fetched from database #}
+{% set cats = ['COFFEE', 'MILK FLAVOR LATTE', 'OTHERS', 'FOOD & SNACK'] %}
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <!-- Responsive viewport dengan melarang user pinch to zoom agar layaknya App -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Menu Digital - Cafe BOS</title>
+    <!-- Font Kekinian (Sama dengan arsip agar seragam) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #05070a;
+            --surface-color: #0d1117;
+            --accent-gold: #d4af37;
+            --accent-gold-bright: #f1d279;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --nav-height: 140px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { scrollbar-width: none; }
+
+        .header-wrapper {
+            position: fixed;
+            top: 0; left: 0; width: 100%;
+            z-index: 1000;
+            background: rgba(5, 7, 10, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .header-title {
+            padding: 25px 0 10px 0;
+            text-align: center;
+        }
+
+        .header-title h1 {
+            font-size: clamp(1.8rem, 6vw, 2.8rem);
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-gold) 50%, #fff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+        }
+
+        .category-nav {
+            padding: 15px;
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+            justify-content: flex-start;
+        }
+
+        @media (min-width: 1024px) {
+            .category-nav { justify-content: center; }
+        }
+
+        .nav-pill {
+            text-decoration: none;
+            color: var(--text-secondary);
+            background: var(--glass);
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-pill.active, .nav-pill:hover {
+            color: #000;
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            margin-top: calc(var(--nav-height) + 30px);
+            padding: 0 20px 60px 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .category-section {
+            margin-bottom: 70px;
+            scroll-margin-top: calc(var(--nav-height) + 40px);
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 20px;
+        }
+
+        .category-header h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent-gold);
+            margin: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .category-header::after {
+            content: "";
+            flex-grow: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--accent-gold), transparent);
+            opacity: 0.3;
+        }
+
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .menu-container { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 30px; }
+        }
+
+        .card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: var(--accent-gold);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+
+        .image-wrapper {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s ease;
+        }
+
+        .card:hover img {
+            transform: scale(1.15);
+        }
+
+        .image-wrapper::after {
+            content: "";
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to top, var(--surface-color), transparent);
+        }
+
+        .card-content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-content h3 {
+            margin: 0 0 12px 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.4;
+            height: 2.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .price-tag {
+            display: inline-block;
+            color: var(--accent-gold);
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 6px 16px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .price-tag {
+            background: var(--accent-gold);
+            color: #000;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        /* Float Anim */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-wrapper">
+    <div class="header-title">
+        <h1>CAFE BOS</h1>
+    </div>
+    
+    <div class="category-nav" id="navPills">
+        {% for cat in cats %}
+        <a href="#cat-{{ loop.index }}" class="nav-pill {% if loop.first %}active{% endif %}" data-target="cat-{{ loop.index }}">
+            {{ cat }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="main-content">
+    {% for cat in cats %}
+    <div class="category-section" id="cat-{{ loop.index }}">
+        <div class="category-header">
+            <h2>{{ cat }}</h2>
+        </div>
+        
+        <div class="menu-container">
+            {% for item in menus if item.kategori == cat %}
+            <div class="card">
+                <div class="image-wrapper">
+                    {% if item.gambar %}
+                    <img src="{{ url_for('static', filename='menu/' + item.gambar) }}" alt="{{ item.nama }}" onerror="this.src='https://via.placeholder.com/400x400/111827/d4af37?text={{ item.nama }}'">
+                    {% else %}
+                    <img src="https://via.placeholder.com/400x400/111827/d4af37?text={{ item.nama }}" alt="{{ item.nama }}">
+                    {% endif %}
+                </div>
+                <div class="card-content">
+                    <h3>{{ item.nama }}</h3>
+                    <div class="price-tag">Rp {{ "{:,.0f}".format(item.harga).replace(",", ".") }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+    const sections = document.querySelectorAll('.category-section');
+    const navPills = document.querySelectorAll('.nav-pill');
+    const scrollOffset = 200; 
+
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (scrollY >= (sectionTop - scrollOffset)) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navPills.forEach(pill => {
+            pill.classList.remove('active');
+            if (pill.getAttribute('data-target') === current) {
+                pill.classList.add('active');
+                pill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        });
+    });
+
+    navPills.forEach(pill => {
+        pill.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target');
+            const targetSection = document.getElementById(targetId);
+            window.scrollTo({
+                top: targetSection.offsetTop - 160,
+                behavior: 'smooth'
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

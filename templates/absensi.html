@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal Absensi - Cafe BOS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #d4af37;
+            --text: #f8fafc;
+            --primary: #6a1b9a;
+            --secondary: #00838f;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        /* NAVBAR TABS */
+        .navbar {
+            background: var(--card);
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            padding: 12px 25px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .section { display: none; animation: fadeIn 0.3s ease; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ABSENSI GRID */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+        .staff-btn {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 30px 15px;
+            border-radius: 20px;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .staff-btn:hover { border-color: var(--accent); background: rgba(212, 175, 55, 0.1); }
+
+        /* TABLES */
+        .card {
+            background: var(--card);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(255,255,255,0.05); text-align: left; padding: 15px; font-size: 13px; color: var(--accent); }
+        td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+
+        /* FORMS */
+        .form-group { margin-bottom: 15px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #fff;
+            box-sizing: border-box;
+        }
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* PIN MODAL */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 300px; }
+        .pad-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pad-btn:active { background: var(--accent); color: #000; }
+        .pad-btn.submit { background: var(--accent); color: #000; grid-column: span 2; }
+
+        .toast {
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            padding: 15px 30px; border-radius: 50px; z-index: 2000; display: none;
+        }
+
+        /* CAMERA STYLES */
+        .camera-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            background: #000;
+            border: 2px solid var(--accent);
+            aspect-ratio: 4/3;
+        }
+        #video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+        .camera-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+            z-index: 5;
+            transition: opacity 0.3s;
+        }
+        .camera-overlay.hidden { opacity: 0; pointer-events: none; }
+        
+        .scan-status {
+            position: absolute;
+            bottom: 20px;
+            left: 0; width: 100%;
+            text-align: center;
+            color: var(--accent);
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+    <button class="tab-btn active" onclick="showTab('absen')">📱 ABSEN</button>
+    <button class="tab-btn" onclick="showTab('karyawan')">👥 KELOLA KARYAWAN</button>
+    <button class="tab-btn" onclick="showTab('rekap')">📅 REKAP DATA</button>
+    <a href="/admin" style="text-decoration:none;"><button class="tab-btn" style="color:var(--accent);">✖ KELUAR</button></a>
+</nav>
+
+<div class="container">
+    
+    <!-- SECTION ABSEN -->
+    <div id="absen" class="section active">
+        <h2 style="text-align: center; margin-bottom: 5px; font-weight: 800;">SELAMAT DATANG DI CAFE BOS</h2>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span id="attendanceMode" style="padding: 6px 16px; border-radius: 30px; font-weight: 800; font-size: 0.75rem; color: white; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                MENGECEK WAKTU...
+            </span>
+        </div>
+        
+        <div class="camera-container" id="cameraBox">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div id="cameraOverlay" class="camera-overlay">
+                <div style="font-size: 40px; margin-bottom: 15px;">📷</div>
+                <p style="font-weight: 700; color: #fff;">Klik untuk Mengaktifkan Kamera</p>
+                <button onclick="startCamera()" class="btn-save" style="width: auto; padding: 10px 20px;">AKTIFKAN</button>
+            </div>
+            <div id="scanStatus" class="scan-status">Menunggu Kamera...</div>
+        </div>
+
+        <div class="staff-grid">
+            {% for e in employees %}
+            <button class="staff-btn" onclick="openPin('{{ e.id }}', '{{ e.nama }}')">
+                <div style="font-size: 30px; margin-bottom: 10px;">👤</div>
+                {{ e.nama }}
+                {% if e.face_descriptor %}
+                <div style="font-size: 10px; color: var(--accent); margin-top: 5px;">✅ Face Registered</div>
+                {% endif %}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SECTION KELOLA KARYAWAN -->
+    <div id="karyawan" class="section">
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px;">
+            <div>
+                <div class="card" style="padding: 20px;">
+                    <h3 style="margin-top: 0; color: var(--accent);">Tambah Karyawan</h3>
+                    <form action="/add_employee" method="POST">
+                        <div class="form-group">
+                            <label style="font-size: 12px; color: #94a3b8;">Nama Lengkap</label>
+                            <input type="text" name="nama" required placeholder="Contoh: Budi Santoso">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 12px; color: #94a3b8;">PIN Keamanan (4-6 Angka)</label>
+                            <input type="number" name="pin" required placeholder="Contoh: 1234">
+                        </div>
+                        <button type="submit" class="btn-save">SIMPAN KARYAWAN</button>
+                    </form>
+                </div>
+            </div>
+            <div>
+                <div class="card">
+                    <div style="padding: 15px; background: rgba(255,255,255,0.05); font-weight: 700;">Daftar Karyawan & PIN</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>NAMA</th>
+                                <th>PIN</th>
+                                <th>AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in employees %}
+                            <tr>
+                                <td><b>{{ e.nama }}</b></td>
+                                <td style="color: var(--accent);">{{ e.pin }}</td>
+                                <td>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button onclick="registerFaceUI('{{ e.id }}', '{{ e.nama }}')" style="background:var(--secondary); border:none; color:white; padding: 5px 10px; border-radius: 5px; cursor:pointer; font-size: 11px;">Daftar Wajah</button>
+                                        <form action="/del_employee/{{ e.id }}" method="POST" onsubmit="return confirm('Hapus karyawan ini?')">
+                                            <button type="submit" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size: 11px;">Hapus</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION REKAP -->
+    <div id="rekap" class="section">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <p style="color: #94a3b8; font-size: 14px; margin: 0;">Data riwayat kehadiran karyawan yang tersimpan di sistem.</p>
+            <a href="/export_absensi" onclick="return confirm('Sistem akan mendownload PDF dan MENGHAPUS seluruh riwayat absensi di aplikasi. Lanjutkan?')">
+                <button style="background: #f43f5e; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    📄 DOWNLOAD PDF & RESET DATA
+                </button>
+            </a>
+        </div>
+        <div class="card">
+            <div style="padding: 15px; background: var(--secondary); font-weight: 700;">Log Kehadiran (Tersimpan)</div>
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table>
+                    <thead style="position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th>NAMA</th>
+                            <th>TANGGAL</th>
+                            <th>MASUK</th>
+                            <th>PULANG</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rekap_all %}
+                        <tr>
+                            <td>{{ r.nama }}</td>
+                            <td>{{ r.tanggal }}</td>
+                            <td style="color: #10b981; font-weight: bold;">{{ r.jam_masuk }}</td>
+                            <td style="color: #f43f5e; font-weight: bold;">{{ r.jam_pulang or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal" id="pinModal">
+    <div style="text-align: center;">
+        <h2 id="targetName" style="color: var(--accent); margin-bottom: 5px;">Nama</h2>
+        <p id="pinStatus" style="margin-bottom: 20px; font-size: 1.5rem; letter-spacing: 10px; height: 30px;"></p>
+        <div class="pin-pad">
+            <button class="pad-btn" onclick="pressNum('1')">1</button>
+            <button class="pad-btn" onclick="pressNum('2')">2</button>
+            <button class="pad-btn" onclick="pressNum('3')">3</button>
+            <button class="pad-btn" onclick="pressNum('4')">4</button>
+            <button class="pad-btn" onclick="pressNum('5')">5</button>
+            <button class="pad-btn" onclick="pressNum('6')">6</button>
+            <button class="pad-btn" onclick="pressNum('7')">7</button>
+            <button class="pad-btn" onclick="pressNum('8')">8</button>
+            <button class="pad-btn" onclick="pressNum('9')">9</button>
+            <button class="pad-btn" onclick="clearPin()" style="color:#ef4444;">C</button>
+            <button class="pad-btn" onclick="pressNum('0')">0</button>
+            <button class="pad-btn submit" onclick="submitAbsen()">ABSEN SEKARANG</button>
+        </div>
+        <button onclick="closePin()" style="margin-top: 30px; background:none; border:none; color:#94a3b8; cursor:pointer; text-decoration:underline;">Batal</button>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    function updateAttendanceMode() {
+        const hour = new Date().getHours();
+        const modeEl = document.getElementById('attendanceMode');
+        if (!modeEl) return;
+        
+        if (hour >= 8 && hour <= 21) {
+            modeEl.innerText = "🟢 MODE ABSEN MASUK (08:00 - 21:59)";
+            modeEl.style.background = "#10b981";
+        } else if (hour >= 22 && hour <= 23) {
+            modeEl.innerText = "🌙 MODE ABSEN PULANG (22:00 - 23:59)";
+            modeEl.style.background = "#d97706";
+        } else {
+            modeEl.innerText = "🔒 PORTAL ABSENSI TUTUP (BUKA 08:00)";
+            modeEl.style.background = "#ef4444";
+        }
+    }
+    
+    updateAttendanceMode();
+    setInterval(updateAttendanceMode, 60000);
+
+    function showTab(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    let currentId = null;
+    let currentPin = "";
+
+    function openPin(id, name) {
+        currentId = id;
+        currentPin = "";
+        document.getElementById('targetName').innerText = name;
+        document.getElementById('pinStatus').innerText = "";
+        document.getElementById('pinModal').classList.add('active');
+    }
+
+    function closePin() {
+        document.getElementById('pinModal').classList.remove('active');
+    }
+
+    function pressNum(n) {
+        if (currentPin.length < 6) {
+            currentPin += n;
+            document.getElementById('pinStatus').innerText = "*".repeat(currentPin.length);
+        }
+    }
+
+    function clearPin() {
+        currentPin = "";
+        document.getElementById('pinStatus').innerText = "";
+    }
+
+    async function submitAbsen() {
+        if (currentPin.length < 4) return;
+        const formData = new FormData();
+        formData.append('employee_id', currentId);
+        formData.append('pin', currentPin);
+
+        try {
+            const res = await fetch('/submit_absensi', { method: 'POST', body: formData });
+            const data = await res.json();
+            showToast(data.message, data.status);
+            if (data.status === 'success') {
+                setTimeout(() => location.reload(), 2000);
+            }
+        } catch (e) { showToast("Gagal memproses", "error"); }
+    }
+
+    function showToast(msg, status) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.display = 'block';
+        t.style.background = status === 'success' ? '#10b981' : '#ef4444';
+        t.style.color = '#fff';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+
+    // FACE RECOGNITION LOGIC
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const scanStatus = document.getElementById('scanStatus');
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    
+    let isModelsLoaded = false;
+    let isCameraStarted = false;
+    let isRegistering = false;
+    let isProcessingAbsen = false;
+    let lastAbsenId = null;
+    let lastAbsenTime = 0;
+
+    // Load models
+    async function loadModels() {
+        scanStatus.innerText = "Memuat Model AI...";
+        
+        // Force CPU backend if WebGL fails
+        try {
+            await faceapi.tf.setBackend('cpu');
+            console.log("Using CPU Backend");
+        } catch (e) {
+            console.log("Failed to set CPU backend, using default");
+        }
+
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        isModelsLoaded = true;
+        scanStatus.innerText = "Model Siap.";
+    }
+
+    async function startCamera() {
+        if (!isModelsLoaded) await loadModels();
+        
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+            video.srcObject = stream;
+            cameraOverlay.classList.add('hidden');
+            isCameraStarted = true;
+            scanStatus.innerText = "Scanning...";
+            startFaceRecognition();
+        } catch (err) {
+            console.error("Camera Error:", err);
+            let errorMsg = "Gagal mengakses kamera";
+            if (err.name === 'NotAllowedError') errorMsg = "Izin Kamera Ditolak Browser!";
+            if (err.name === 'NotFoundError') errorMsg = "Kamera tidak ditemukan!";
+            if (err.name === 'NotReadableError') errorMsg = "Kamera sedang digunakan aplikasi lain!";
+            
+            showToast(`${errorMsg} (${err.message})`, "error");
+            scanStatus.innerText = errorMsg;
+        }
+    }
+
+    const knownFaces = [];
+    {% for e in employees if e.face_descriptor %}
+    knownFaces.push({ 
+        id: '{{ e.id }}', 
+        name: '{{ e.nama }}', 
+        descriptor: new Float32Array({{ e.face_descriptor }}) 
+    });
+    {% endfor %}
+
+    async function startFaceRecognition() {
+        const displaySize = { width: video.clientWidth, height: video.clientHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        setInterval(async () => {
+            if (!isCameraStarted || isRegistering || isProcessingAbsen) return;
+
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptors();
+
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (detections.length > 0) {
+                scanStatus.innerText = "Wajah Terdeteksi!";
+                
+                detections.forEach(detection => {
+                    if (knownFaces.length === 0) return;
+
+                    const bestMatch = getBestMatch(detection.descriptor);
+                    if (bestMatch.distance < 0.45) {
+                        scanStatus.innerText = `Halo, ${bestMatch.name}!`;
+                        
+                        const now = Date.now();
+                        if (lastAbsenId === bestMatch.id && (now - lastAbsenTime) < 60000) {
+                            scanStatus.innerText = `Sudah Tercatat, ${bestMatch.name}.`;
+                            return;
+                        }
+
+                        submitAbsenFace(bestMatch.id, bestMatch.name);
+                    }
+                });
+            } else {
+                scanStatus.innerText = "Mencari Wajah...";
+            }
+        }, 1000);
+    }
+
+    async function submitAbsenFace(id, name) {
+        if (isProcessingAbsen) return;
+        isProcessingAbsen = true;
+        scanStatus.innerText = `Mencatat Absensi ${name}...`;
+
+        const formData = new FormData();
+        formData.append('employee_id', id);
+
+        try {
+            const res = await fetch('/submit_absensi_face', { method: 'POST', body: formData });
+            const data = await res.json();
+            showToast(data.message, data.status);
+            
+            if (data.status === 'success') {
+                lastAbsenId = id;
+                lastAbsenTime = Date.now();
+                setTimeout(() => {
+                    isProcessingAbsen = false;
+                    scanStatus.innerText = "Scanning...";
+                }, 5000);
+            } else {
+                isProcessingAbsen = false;
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal memproses", "error");
+            isProcessingAbsen = false;
+        }
+    }
+
+    function getBestMatch(descriptor) {
+        let bestMatch = { id: null, name: 'Unknown', distance: 1.0 };
+        knownFaces.forEach(face => {
+            const distance = faceapi.euclideanDistance(descriptor, face.descriptor);
+            if (distance < bestMatch.distance) {
+                bestMatch = { id: face.id, name: face.name, distance: distance };
+            }
+        });
+        return bestMatch;
+    }
+
+    async function registerFaceUI(id, name) {
+        if (!isCameraStarted) {
+            alert("Aktifkan kamera di tab ABSEN terlebih dahulu.");
+            showTab('absen');
+            return;
+        }
+        
+        if (!confirm(`Daftarkan wajah untuk ${name}? Pastikan hanya wajah ${name} yang terlihat di kamera.`)) return;
+        
+        scanStatus.innerText = `Mendaftarkan wajah ${name}...`;
+        isRegistering = true;
+        
+        try {
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            
+            if (detection) {
+                const descriptorArray = Array.from(detection.descriptor);
+                const formData = new FormData();
+                formData.append('employee_id', id);
+                formData.append('descriptor', JSON.stringify(descriptorArray));
+                
+                const res = await fetch('/register_face', { method: 'POST', body: formData });
+                const data = await res.json();
+                showToast(data.message, data.status);
+                if (data.status === 'success') setTimeout(() => location.reload(), 2000);
+            } else {
+                alert("Wajah tidak terdeteksi. Silakan coba lagi.");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Gagal mendaftarkan wajah", "error");
+        } finally {
+            isRegistering = false;
+        }
+    }
+</script>
+
+</body>
+</html>

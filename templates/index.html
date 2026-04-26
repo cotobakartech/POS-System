@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BOS Waiter - Premium Order System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#2563eb">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW Registration Failed', err));
+            });
+        }
+    </script>
+</head>
+<body class="page-waiter">
+
+<div class="search-container">
+    <div class="search-box">
+        <span style="font-size: 20px;">🔍</span>
+        <input type="text" id="searchInput" placeholder="Cari menu BOS..." onkeyup="filterMenu()">
+    </div>
+</div>
+
+<div class="container">
+    <div class="header-section">
+        <h1>CAFE BOS WAITER</h1>
+    </div>
+
+    <form action="/order" method="POST" id="orderForm">
+        <div class="order-info">
+            <label style="font-size: 12px; font-weight: 800; color: var(--accent-gold); display: block; margin-bottom: 8px; text-align: center;">NOMOR MEJA</label>
+            <input type="number" name="meja" placeholder="00" required>
+        </div>
+
+        {% set cats = menus | map(attribute='kategori') | unique | list | sort %}
+        {% for cat in cats %}
+        <div class="category-block" id="cat-{{ loop.index }}">
+            <div class="cat-title">{{ cat }}</div>
+            <div class="menu-grid">
+                {% for m in menus if m.kategori == cat %}
+                <div class="menu-card" data-name="{{ m.nama | lower }}">
+                    <div class="item-details">
+                        <h3>{{ m.nama }}</h3>
+                        <div class="price">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</div>
+                        
+                        {% if m.has_opt or m.topping %}
+                        <div class="options-area">
+                            {% if m.has_opt %}
+                            <select name="{{ m.id }}_ice">
+                                <option>Normal Ice</option><option>Less Ice</option><option>HOT</option>
+                            </select>
+                            <select name="{{ m.id }}_sugar">
+                                <option>Normal Sugar</option><option>Less Sugar</option><option>No Sugar</option>
+                            </select>
+                            {% endif %}
+                            
+                            {% if m.topping %}
+                            {% set tops = m.topping.split(',') %}
+                            {% set hargas = m.harga_topping.split(',') %}
+                            <select name="{{ m.id }}_top" style="grid-column: span 2;">
+                                <option value="">-- Topping --</option>
+                                {% for i in range(tops|length) %}
+                                <option value="{{ tops[i].strip() }}|{{ hargas[i].strip() }}">
+                                    {{ tops[i].strip() }} (+{{ hargas[i].strip() }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn-add" 
+                            data-id="{{ m.id }}" 
+                            data-nama="{{ m.nama }}" 
+                            data-harga="{{ m.harga }}" 
+                            data-hasopt="{{ 'true' if m.has_opt else 'false' }}"
+                            onclick="clickAdd(this)">+</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="cart-backdrop" id="cartBackdrop" onclick="toggleCart()"></div>
+
+        <button type="button" class="cart-fab" id="cartFab" onclick="toggleCart()" style="display:flex;">
+            🛒
+            <span id="fabBadge" class="fab-badge">0</span>
+        </button>
+
+        <div class="side-cart" id="sideCart">
+            <div class="side-cart-header">
+                <div style="font-weight: 800; font-size: 20px;">🛒 PESANAN</div>
+                <button type="button" onclick="toggleCart()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer;">×</button>
+            </div>
+            
+            <div id="totalSection" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 15px; text-align: center;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">TOTAL PEMBAYARAN</div>
+                <div style="color: var(--accent-gold); font-weight: 800; font-size: 24px;" id="totalLabel">Rp 0</div>
+            </div>
+
+            <div class="cart-items" id="cartItems">
+                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+                    <div style="font-size:40px; margin-bottom:10px;">☕</div>
+                    <p>Keranjang masih kosong...</p>
+                </div>
+            </div>
+
+            <button type="button" id="btnOrder" class="btn-submit" disabled
+                    onclick="submitOrder()"
+                    ontouchend="handleSubmitTouch(event)">
+                <span>KIRIM PESANAN</span>
+            </button>
+        </div>
+        
+        <input type="hidden" name="cart_data" id="cart_data">
+    </form>
+</div>
+
+<script>
+    let cart = [];
+
+    // Fix iOS Safari: blur all inputs/selects to dismiss keyboard before any action
+    function blurAllInputs() {
+        document.activeElement && document.activeElement.blur();
+        document.querySelectorAll('input, select, textarea').forEach(el => el.blur());
+    }
+
+    // Handle touch event for iOS Safari submit button
+    function handleSubmitTouch(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        blurAllInputs();
+        // Small delay to let keyboard dismiss first
+        setTimeout(() => submitOrder(), 100);
+    }
+
+    // Submit order via JS to avoid iOS Safari focus issues
+    function submitOrder() {
+        blurAllInputs();
+        let btn = document.getElementById('btnOrder');
+        if (btn.disabled) return;
+        let form = document.getElementById('orderForm');
+        document.getElementById('cart_data').value = JSON.stringify(cart);
+        form.submit();
+    }
+
+    function formatRupiah(number) {
+        return new Intl.NumberFormat('id-ID').format(number);
+    }
+
+    function clickAdd(btn) {
+        const id = btn.getAttribute('data-id');
+        const nama = btn.getAttribute('data-nama');
+        const harga = btn.getAttribute('data-harga');
+        const hasOpt = btn.getAttribute('data-hasopt') === 'true';
+        addToCart(id, nama, harga, hasOpt);
+    }
+
+    function addToCart(id, nama, harga, hasOpt) {
+        let ice = "";
+        let sugar = "";
+        let topping = "";
+        let toppingHarga = 0;
+
+        if (hasOpt) {
+            ice = document.querySelector(`[name="${id}_ice"]`)?.value || "Normal Ice";
+            sugar = document.querySelector(`[name="${id}_sugar"]`)?.value || "Normal Sugar";
+        }
+
+        let topSelect = document.querySelector(`[name="${id}_top"]`);
+        if (topSelect && topSelect.value) {
+            let parts = topSelect.value.split("|");
+            topping = parts[0];
+            toppingHarga = parseInt(parts[1]);
+        }
+
+        let key = `${id}_${ice}_${sugar}_${topping}`;
+        let existing = cart.find(i => i.key === key);
+
+        if (existing) {
+            existing.qty += 1;
+        } else {
+            cart.push({
+                key, id, nama, qty: 1, ice, sugar, topping,
+                harga: parseInt(harga) + toppingHarga
+            });
+        }
+
+        renderCart();
+    }
+
+    function renderCart() {
+        let el = document.getElementById("cartItems");
+        let sideCart = document.getElementById("sideCart");
+        let fab = document.getElementById("cartFab");
+        let totalLabel = document.getElementById("totalLabel");
+        let fabBadge = document.getElementById("fabBadge");
+        
+        let totalQty = 0;
+        let totalPrice = 0;
+
+        if (cart.length === 0) {
+            el.innerHTML = `
+                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+                    <div style="font-size:40px; margin-bottom:10px;">☕</div>
+                    <p>Keranjang masih kosong...</p>
+                </div>
+            `;
+            // Cart kosong: tetap tampilkan FAB
+            sideCart.classList.remove('active');
+            document.getElementById('cartBackdrop').classList.remove('active');
+            document.body.classList.remove('cart-open');
+        } else {
+            el.innerHTML = "";
+            cart.forEach((item, i) => {
+                totalQty += item.qty;
+                totalPrice += (item.qty * item.harga);
+
+                let details = [];
+                if (item.ice) details.push(item.ice);
+                if (item.sugar) details.push(item.sugar);
+                if (item.topping) details.push("+" + item.topping);
+                
+                let detailString = details.length > 0 ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">${details.join(", ")}</div>` : "";
+
+                el.innerHTML += `
+                    <div class="cart-row">
+                        <div style="flex: 1;">
+                            <div style="font-weight:700; font-size:15px; color:#fff;">${item.nama}</div>
+                            ${detailString}
+                            <div style="font-size:13px; color:var(--accent-gold); margin-top:4px;">Rp ${formatRupiah(item.harga)} / pcs</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button type="button" onclick="decreaseQty(${i})" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); width:32px; height:32px; border-radius:10px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">−</button>
+                            <span style="color:#fff; font-weight:800; font-size:16px; min-width:24px; text-align:center;">${item.qty}</span>
+                            <button type="button" onclick="increaseQty(${i})" style="background:var(--accent-gold); border:none; width:32px; height:32px; border-radius:10px; color:#000; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+            // FAB selalu terlihat
+        }
+
+        document.getElementById("cart_data").value = JSON.stringify(cart);
+        totalLabel.innerText = "Rp " + formatRupiah(totalPrice);
+        fabBadge.innerText = totalQty;
+        document.getElementById('btnOrder').disabled = (totalQty === 0);
+    }
+
+    function toggleCart() {
+        let sideCart = document.getElementById("sideCart");
+        let backdrop = document.getElementById("cartBackdrop");
+        let isActive = sideCart.classList.toggle('active');
+        backdrop.classList.toggle('active');
+        
+        if (isActive) {
+            document.body.classList.add('cart-open');
+        } else {
+            document.body.classList.remove('cart-open');
+        }
+    }
+
+
+    function decreaseQty(index) {
+        if (cart[index].qty > 1) {
+            cart[index].qty -= 1;
+        } else {
+            cart.splice(index, 1);
+        }
+        renderCart();
+    }
+
+    function increaseQty(index) {
+        cart[index].qty += 1;
+        renderCart();
+    }
+
+    function removeItem(index) {
+        cart.splice(index, 1);
+        renderCart();
+    }
+
+    function filterMenu() {
+        let input = document.getElementById('searchInput').value.toLowerCase();
+        let cards = document.getElementsByClassName('menu-card');
+        let blocks = document.getElementsByClassName('category-block');
+
+        for (let i = 0; i < cards.length; i++) {
+            let card = cards[i];
+            let name = card.getAttribute('data-name');
+            card.style.display = name.indexOf(input) > -1 ? "flex" : "none";
+        }
+
+        for (let i = 0; i < blocks.length; i++) {
+            let block = blocks[i];
+            let visibleCards = block.querySelectorAll('.menu-card[style*="display: flex"]');
+            block.style.display = visibleCards.length === 0 ? "none" : "block";
+        }
+    }
+</script>
+</body>
+</html>

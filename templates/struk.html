@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Struk #{{ o.id }}</title>
+    <style>
+
+        @page{
+            size: 80mm auto;
+            margin: 0;
+        }
+
+        body { 
+            font-family: 'Courier New', Courier, monospace; 
+            width: 80mm; 
+            margin: 0; 
+            padding: 3mm; 
+            font-size: 12px; 
+            color: #000;
+        }
+        .center { text-align: center; }
+        .flex { display: flex; justify-content: space-between; }
+        .dashed { border-top: 1px dashed black; margin: 5px 0; }
+        .double-dashed { border-top: 1px dashed black; border-bottom: 1px dashed black; height: 3px; margin: 5px 0; }
+        
+        .items-container { margin: 10px 0; }
+        .item-row { margin-bottom: 6px; }
+        .item-name { display: block; width: 100%; white-space: pre-wrap; }
+        .item-details { display: flex; justify-content: space-between; padding-left: 2mm; }
+        
+        .total-section { margin-top: 5px; }
+        .total-row { display: flex; margin-bottom: 2px; }
+        .label { width: 60%; }
+        .price-col { width: 40%; text-align: right; }
+
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="center">
+        <strong>CAFE BOS</strong><br>
+        Citraland Tallasa City<br>
+        Ruko A1 No.3, Kapasa<br>
+        Tamalanrea, Makassar
+    </div>
+
+    <div class="double-dashed"></div>
+    <div class="flex">
+        <span>Meja: {{ o.meja }}</span>
+        <span>Kasir: {{ kasir }}</span>
+    </div>
+    <div>Pel  : Customer</div>
+    <div class="double-dashed"></div>
+
+    <div class="items-container">
+        {% set data = o.menu.split('|') %}
+        
+        {% for line in data %}
+            {% if "TOTAL_QTY:" not in line %}
+                {% set parts = line.split('\n') %}
+                <div class="item-row">
+                    <span class="item-name">{{ parts[0] }}</span>
+                    {% if parts|length > 1 %}
+                    <div class="item-details">
+                        {% set sub_parts = parts[1].split('  ') %}
+                        <span>{{ sub_parts[0] }} x {{ sub_parts[1] }}</span>
+                        <span>{{ sub_parts[2] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="dashed"></div>
+    
+    <div class="total-section">
+        <div class="total-row">
+            <span class="label"><strong>TOTAL</strong></span>
+            <span class="price-col"><strong>{{ "{:,.0f}".format(o.total).replace(",", ".") }}</strong></span>
+        </div>
+
+        <div class="total-row">
+            <span class="label">Tunai</span>
+            <span class="price-col">{{ "{:,.0f}".format(bayar|int).replace(",", ".") }}</span>
+        </div>
+
+        <div class="total-row">
+            <span class="label">Kembalian</span>
+            <span class="price-col">{{ "{:,.0f}".format((bayar|int) - o.total).replace(",", ".") }}</span>
+        </div>
+
+        <div class="total-row">
+            <span class="label">PPN (10%)</span>
+            <span class="price-col">{{ "{:,.0f}".format((o.total * 0.10)|int).replace(",", ".") }}</span>
+        </div>
+    </div>
+
+    <div class="double-dashed"></div>
+
+    <div class="flex">
+        <span>Tgl. {{ o.waktu }}</span>
+    </div>
+    
+    <div class="dashed"></div>
+    <div class="center">
+        Terima Kasih!<br>
+    </div>
+
+    <br>
+    <button class="no-print" onclick="window.location.href='/admin'" style="width: 100%; padding: 10px; background: #333; color: #fff; border: none; border-radius: 5px; cursor: pointer;">KEMBALI KE ADMIN</button>
+</body>
+</html>

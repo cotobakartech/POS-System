@@ -1,0 +1,22 @@
+{
+  "name": "Cafe BOS - Premium Order",
+  "short_name": "Cafe BOS",
+  "description": "Premium Order & Management System for Cafe BOS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/static/images/logo_bos.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/logo_bos.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

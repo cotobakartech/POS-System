@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+database.db
+
+# Reports
+*.xlsx
+
+# Binaries
+cloudflared.exe
+
+# IDEs
+.vscode/
+
+# Scratch files
+scratch/
