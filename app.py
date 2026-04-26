@@ -1874,7 +1874,7 @@ def export_absensi():
     conn.commit()
     conn.close()
     
-    return send_from_directory('.', filename, as_attachment=True)
+    return send_from_directory('static', filename, as_attachment=True)
 
 # Routes analytics dan arsip_laporan lama telah digabung ke /reports
 @app.route('/analytics')
