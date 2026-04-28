@@ -553,12 +553,7 @@
                 </div>
             </div>
 
-            <div class="chart-box">
-                <div class="chart-title"><span></span>TOP 10 MENU TERLARIS</div>
-                <div class="chart-container" style="min-height: 400px;">
-                    <canvas id="menuChart"></canvas>
-                </div>
-            </div>
+
         </div>
 
         <!-- TAB 2: ARCHIVE -->
@@ -772,26 +767,31 @@
             <div class="stats-grid"
                 style="margin-bottom: 30px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
                 <div class="stat-card" style="border-left: 6px solid #10b981; background: rgba(16, 185, 129, 0.05);">
-                    <span class="stat-label">🏦 DANA DI VAULT (TERSIMPAN)</span>
+                    <span class="stat-label">🏦 DANA DI RESEPSIONIS (VAULT)</span>
                     <div class="stat-value" style="color: #10b981;">Rp {{
                         "{:,.0f}".format(saldo_dana_tersimpan).replace(",", ".") }}</div>
-                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Akumulasi bersih dari arsip
-                        harian.</p>
+                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Uang yang sudah tersimpan dari
+                        tutup buku lalu.</p>
+                </div>
+                <div class="stat-card" style="border-left: 6px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
+                    <span class="stat-label">☕ KASIR CAFE (HARI INI)</span>
+                    <div class="stat-value" style="color: #f59e0b;">Rp {{
+                        "{:,.0f}".format(total_cash_cafe_live).replace(",", ".") }}</div>
+                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Net cash di laci cafe saat ini.
+                    </p>
                 </div>
                 <div class="stat-card" style="border-left: 6px solid #3b82f6; background: rgba(59, 130, 246, 0.05);">
-                    <span class="stat-label">🪙 DANA KAS KECIL (DRAWER)</span>
-                    <div class="stat-value" style="color: #3b82f6;">Rp {{ "{:,.0f}".format(modal_kembalian).replace(",",
-                        ".") }}</div>
-                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Modal kembalian yang stand-by
-                        di laci.</p>
+                    <span class="stat-label">🏢 KASIR RESEPSIONIS (HARI INI)</span>
+                    <div class="stat-value" style="color: #3b82f6;">Rp {{
+                        "{:,.0f}".format(total_cash_reception_live).replace(",", ".") }}</div>
+                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Hasil penjualan produk PT BOS hari ini.</p>
                 </div>
                 <div class="stat-card"
                     style="border-left: 6px solid var(--primary-gold); background: var(--primary-gold-low);">
                     <span class="stat-label">💰 TOTAL KESELURUHAN ASET</span>
                     <div class="stat-value" style="color: var(--primary-gold);">Rp {{
-                        "{:,.0f}".format(saldo_dana_tersimpan + modal_kembalian).replace(",", ".") }}</div>
-                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Total uang tunai fisik yang
-                        seharusnya ada.</p>
+                        "{:,.0f}".format(saldo_dana_tersimpan + total_cash_cafe_live + total_cash_reception_live + modal_kembalian).replace(",", ".") }}</div>
+                    <p style="font-size: 11px; color: var(--text-dim); margin: 5px 0 0;">Total uang fisik (Vault + Semua Laci + Modal).</p>
                 </div>
             </div>
 
@@ -1116,25 +1116,7 @@
             }
         });
 
-        // 3. Top Menu
-        const ctxMenu = document.getElementById('menuChart').getContext('2d');
-        new Chart(ctxMenu, {
-            type: 'bar',
-            data: {
-                labels: JSON.parse('{{ top_menu_labels | tojson | safe }}'),
-                datasets: [{
-                    data: JSON.parse('{{ top_menu_data | tojson | safe }}'),
-                    backgroundColor: '#d4af37',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } }
-            }
-        });
+
         // Handle tab from URL
         window.onload = function () {
             const urlParams = new URLSearchParams(window.location.search);

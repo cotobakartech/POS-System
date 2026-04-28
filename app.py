@@ -213,7 +213,14 @@ def init_db():
         menu TEXT, 
         total INTEGER, 
         status TEXT DEFAULT 'pending', 
-        waktu TEXT)''')
+        waktu TEXT,
+        is_archived INTEGER DEFAULT 0)''')
+    
+    # MIGRASI: Tambahkan is_archived ke orders jika belum ada
+    try:
+        c.execute('SELECT is_archived FROM orders LIMIT 1')
+    except sqlite3.OperationalError:
+        c.execute('ALTER TABLE orders ADD COLUMN is_archived INTEGER DEFAULT 0')
     
     # Tabel Settings
     c.execute('''CREATE TABLE IF NOT EXISTS settings (
@@ -240,42 +247,30 @@ def init_db():
         keterangan TEXT,
         jumlah INTEGER,
         waktu TEXT,
-        source TEXT DEFAULT 'cafe'
+        source TEXT DEFAULT 'cafe',
+        is_archived INTEGER DEFAULT 0
     )''')
     
-    # MIGRASI OTOMATIS: Tambahkan kolom source jika belum ada
+    # MIGRASI: Tambahkan is_archived ke expenses jika belum ada
     try:
-        c.execute('SELECT source FROM expenses LIMIT 1')
+        c.execute('SELECT is_archived FROM expenses LIMIT 1')
     except sqlite3.OperationalError:
-        c.execute("ALTER TABLE expenses ADD COLUMN source TEXT DEFAULT 'cafe'")
-
-    # MIGRASI OTOMATIS: Tambahkan kolom gambar jika belum ada
-    try:
-        c.execute('SELECT gambar FROM menus LIMIT 1')
-    except sqlite3.OperationalError:
-        c.execute('ALTER TABLE menus ADD COLUMN gambar TEXT')
-
-    # MIGRASI OTOMATIS: Tambahkan kolom show_on_tv jika belum ada
-    try:
-        c.execute('SELECT show_on_tv FROM menus LIMIT 1')
-    except sqlite3.OperationalError:
-        c.execute('ALTER TABLE menus ADD COLUMN show_on_tv INTEGER DEFAULT 0')
-    
-    # Tabel Pengeluaran
-    c.execute('''CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        keterangan TEXT,
-        jumlah INTEGER,
-        waktu TEXT
-    )''')
+        c.execute('ALTER TABLE expenses ADD COLUMN is_archived INTEGER DEFAULT 0')
 
     # Tabel Pemasukan Produk PT BOS
     c.execute('''CREATE TABLE IF NOT EXISTS pemasukan_ptbos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         keterangan TEXT,
         jumlah INTEGER,
-        waktu TEXT
+        waktu TEXT,
+        is_archived INTEGER DEFAULT 0
     )''')
+
+    # MIGRASI: Tambahkan is_archived ke pemasukan_ptbos jika belum ada
+    try:
+        c.execute('SELECT is_archived FROM pemasukan_ptbos LIMIT 1')
+    except sqlite3.OperationalError:
+        c.execute('ALTER TABLE pemasukan_ptbos ADD COLUMN is_archived INTEGER DEFAULT 0')
 
     # Tabel Input Stok Cafe BOS
     c.execute('''CREATE TABLE IF NOT EXISTS input_stok (
@@ -283,8 +278,15 @@ def init_db():
         keterangan TEXT,
         qty INTEGER,
         jumlah INTEGER,
-        waktu TEXT
+        waktu TEXT,
+        is_archived INTEGER DEFAULT 0
     )''')
+    
+    # MIGRASI: Tambahkan is_archived ke input_stok jika belum ada
+    try:
+        c.execute('SELECT is_archived FROM input_stok LIMIT 1')
+    except sqlite3.OperationalError:
+        c.execute('ALTER TABLE input_stok ADD COLUMN is_archived INTEGER DEFAULT 0')
     
     # MIGRASI OTOMATIS: Tambahkan kolom kategori jika belum ada
     try:
@@ -488,15 +490,13 @@ def order():
 @login_required
 def admin():
     conn = get_db_connection()
-    # Hanya tampilkan pesanan pending ATAU pesanan selesai HARI INI
-    today_str = datetime.now().strftime("%d-%m-%Y")
-    
+    # Hanya tampilkan pesanan pending ATAU pesanan selesai yang BELUM DIARSIP
     orders = conn.execute("""
         SELECT * FROM orders 
         WHERE status='pending' 
-        OR (status='selesai' AND waktu LIKE ?)
+        OR (status='selesai' AND is_archived=0)
         ORDER BY CASE WHEN status='pending' THEN 0 ELSE 1 END, id DESC
-    """, (today_str + '%',)).fetchall()
+    """).fetchall()
     
     menus = conn.execute("SELECT * FROM menus ORDER BY kategori ASC").fetchall()
     conn.close()
@@ -596,6 +596,15 @@ def update_material():
     conn.commit()
     conn.close()
     return redirect('/inventory')
+
+@app.route('/delete_order/<int:id>', methods=['POST'])
+@login_required
+def delete_order(id):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM orders WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect('/admin')
 
 @app.route('/del_material/<int:id>', methods=['POST'])
 @login_required
@@ -819,12 +828,11 @@ def print_barista(id):
 @login_required
 def archive():
     conn = get_db_connection()
-    # Mengambil data pesanan yang sudah selesai dan pengeluaran HARI INI saja
-    today_str = datetime.now().strftime("%d-%m-%Y")
-    
-    orders = conn.execute("SELECT * FROM orders WHERE status='selesai' AND waktu LIKE ?", (today_str + '%',)).fetchall()
-    expenses = conn.execute("SELECT * FROM expenses WHERE waktu LIKE ? AND source='cafe'", (today_str + '%',)).fetchall()
-    pemasukan_ptbos = conn.execute("SELECT * FROM pemasukan_ptbos WHERE waktu LIKE ?", (today_str + '%',)).fetchall()
+    # Mengambil semua data yang BELUM PERNAH DIARSIP (Tanpa batasan jam 12 malam)
+    orders = conn.execute("SELECT * FROM orders WHERE status='selesai' AND is_archived=0").fetchall()
+    expenses = conn.execute("SELECT * FROM expenses WHERE is_archived=0 AND source='cafe'").fetchall()
+    pemasukan_ptbos = conn.execute("SELECT * FROM pemasukan_ptbos WHERE is_archived=0").fetchall()
+    stok_data = conn.execute("SELECT * FROM input_stok WHERE is_archived=0").fetchall()
 
     # Jika tidak ada data sama sekali, jangan buat file
     if not orders and not expenses and not pemasukan_ptbos:
@@ -966,8 +974,12 @@ def archive():
         except Exception as e:
             print(f"Gagal memanggil fungsi upload: {e}")
                 
-        # DATA TIDAK LAGI DIHAPUS agar bisa muncul di Dashboard Analitik
-        # (Sesuai update sistem untuk monitoring performa jangka panjang)
+        # TANDAI DATA SEBAGAI SUDAH DIARSIP
+        conn.execute("UPDATE orders SET is_archived=1 WHERE status='selesai' AND is_archived=0")
+        conn.execute("UPDATE expenses SET is_archived=1 WHERE is_archived=0")
+        conn.execute("UPDATE pemasukan_ptbos SET is_archived=1 WHERE is_archived=0")
+        conn.execute("UPDATE input_stok SET is_archived=1 WHERE is_archived=0")
+        
         conn.commit()
 
     except Exception as e:
@@ -1304,47 +1316,63 @@ def print_ptbos(keterangan, jumlah, waktu):
 @login_required
 def reports():
     conn = get_db_connection()
-    
     # --- PART 1: ANALYTICS LOGIC (Live DB) ---
-    today_str = datetime.now().strftime("%d-%m-%Y")
-    
-    revenue_cafe = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND waktu LIKE ?", (today_str + '%',)).fetchone()[0] or 0
-    revenue_ptbos = conn.execute("SELECT SUM(jumlah) FROM pemasukan_ptbos WHERE waktu LIKE ?", (today_str + '%',)).fetchone()[0] or 0
+    # Ambil data LIVE (Belum diarsip)
+    revenue_cafe = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
+    revenue_ptbos = conn.execute("SELECT SUM(jumlah) FROM pemasukan_ptbos WHERE is_archived=0").fetchone()[0] or 0
     total_pemasukan_gabungan = revenue_cafe + revenue_ptbos
     
-    # Dana Tersimpan khusus (Hanya Cash Cafe - Pengeluaran Khusus Dana) - INI LIFETIME
-    revenue_cash_cafe_all_time = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND LOWER(metode)='cash'").fetchone()[0] or 0
+    # 1. KAS LACI CAFE SAAT INI (LIVE)
+    # Ambil pengeluaran cafe (source='cafe') dan stok yang BELUM DIARSIP
+    expenses_cafe_today_list = conn.execute("SELECT * FROM expenses WHERE source='cafe' AND is_archived=0").fetchall()
+    stock_today_list = conn.execute("SELECT * FROM input_stok WHERE is_archived=0").fetchall()
     
-    # Ambil pengeluaran khusus dari Dana Tersimpan (source='dana') - INI LIFETIME
-    expenses_dana_list = conn.execute("SELECT * FROM expenses WHERE source='dana' ORDER BY id DESC").fetchall()
-    expenses_dana_sum = sum(e['jumlah'] for e in expenses_dana_list)
+    expenses_cafe_sum = sum(e['jumlah'] for e in expenses_cafe_today_list)
+    stock_sum = sum(s['jumlah'] * s['qty'] for s in stock_today_list)
     
-    # Saldo Dana Tersimpan = Total Cash Cafe lifetime - Pengeluaran dari Dana lifetime
-    saldo_dana_tersimpan = revenue_cash_cafe_all_time - expenses_dana_sum
+    # Revenue Cafe (Cash Only) yang BELUM DIARSIP
+    cash_cafe_today_raw = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND LOWER(metode)='cash' AND is_archived=0").fetchone()[0] or 0
+    total_cash_cafe_live = cash_cafe_today_raw - expenses_cafe_sum - stock_sum
+
+    # 2. KAS LACI RESEPSIONIS SAAT INI (LIVE)
+    # Ambil pengeluaran resepsionis (source='reception') yang BELUM DIARSIP
+    expenses_reception_today_list = conn.execute("SELECT * FROM expenses WHERE source='reception' AND is_archived=0").fetchall()
+    expenses_reception_sum = sum(e['jumlah'] for e in expenses_reception_today_list)
     
-    # Pengeluaran Cafe (source='cafe') dan Stok (tetap dianggap cafe drawer) - HARI INI SAJA
-    expenses_cafe_list = conn.execute("SELECT * FROM expenses WHERE source='cafe' AND waktu LIKE ? ORDER BY id DESC", (today_str + '%',)).fetchall()
-    stock_expenses_live_list = conn.execute("SELECT * FROM input_stok WHERE waktu LIKE ? ORDER BY id DESC", (today_str + '%',)).fetchall()
+    # Revenue PT BOS yang BELUM DIARSIP
+    revenue_ptbos_unarchived = conn.execute("SELECT SUM(jumlah) FROM pemasukan_ptbos WHERE is_archived=0").fetchone()[0] or 0
+    total_cash_reception_live = revenue_ptbos_unarchived - expenses_reception_sum
     
-    expenses_cafe_sum = sum(e['jumlah'] for e in expenses_cafe_list)
-    stock_expenses_live_sum = sum(s['jumlah'] * s['qty'] for s in stock_expenses_live_list)
-    total_expenses_cafe = expenses_cafe_sum + stock_expenses_live_sum
+    # Data lainnya untuk Analytics (Gunakan data UNARCHIVED agar konsisten dengan dashboard)
+    revenue_cafe_unarchived = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
+    total_pemasukan_gabungan = revenue_cafe_unarchived + revenue_ptbos_unarchived
     
-    # Profit Cafe (Revenue - All Cafe Drawer Expenses)
-    profit = revenue_cafe - total_expenses_cafe
+    profit = revenue_cafe_unarchived - (expenses_cafe_sum + stock_sum) # Laba Cafe sesi ini
     
-    total_orders = conn.execute("SELECT COUNT(id) FROM orders WHERE status='selesai' AND waktu LIKE ?", (today_str + '%',)).fetchone()[0] or 0
-    total_cash_live = (conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND LOWER(metode)='cash' AND waktu LIKE ?", (today_str + '%',)).fetchone()[0] or 0) - total_expenses_cafe
-    total_qris_live = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND LOWER(metode)='qris' AND waktu LIKE ?", (today_str + '%',)).fetchone()[0] or 0
-    
-    avg_order = revenue_cafe / total_orders if total_orders > 0 else 0
+    total_orders = conn.execute("SELECT COUNT(id) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
+    total_qris_live = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND LOWER(metode)='qris' AND is_archived=0").fetchone()[0] or 0
+    avg_order = revenue_cafe_unarchived / total_orders if total_orders > 0 else 0
     
     all_sales = conn.execute("SELECT total, waktu FROM orders WHERE status='selesai'").fetchall()
-    daily_sales = {}
+    # DATA MANUAL TREN PENJUALAN (April 2026)
+    daily_sales = {
+        "01-04-2026": 98000, "02-04-2026": 317500, "03-04-2026": 646000,
+        "04-04-2026": 292000, "05-04-2026": 188000, "06-04-2026": 1004000,
+        "07-04-2026": 327500, "08-04-2026": 595000, "09-04-2026": 647500,
+        "10-04-2026": 192950, "11-04-2026": 681220, "12-04-2026": 544050,
+        "13-04-2026": 697900, "14-04-2026": 478360, "15-04-2026": 299720,
+        "16-04-2026": 774600, "17-04-2026": 657540, "18-04-2026": 573790,
+        "19-04-2026": 239100, "20-04-2026": 297700, "21-04-2026": 1171150,
+        "22-04-2026": 851150, "23-04-2026": 723000, "24-04-2026": 1510150,
+        "25-04-2026": 927100, "26-04-2026": 709650
+    }
+    
+    manual_dates = set(daily_sales.keys())
     for s in all_sales:
         try:
             date_part = s['waktu'].split(' ')[0]
-            daily_sales[date_part] = daily_sales.get(date_part, 0) + s['total']
+            if date_part not in manual_dates:
+                daily_sales[date_part] = daily_sales.get(date_part, 0) + s['total']
         except: pass
     
     today_dt = datetime.now()
@@ -1355,24 +1383,7 @@ def reports():
         chart_labels.append(day_str)
         chart_data.append(daily_sales.get(day_str, 0))
     
-    orders_finished = conn.execute("SELECT menu FROM orders WHERE status='selesai'").fetchall()
-    menu_stats = {}
-    for o in orders_finished:
-        items = o['menu'].split('|')
-        for item in items:
-            if "TOTAL_QTY:" not in item and "\n" in item:
-                try:
-                    parts = item.split('\n')
-                    name = parts[0].split(' (')[0].replace(' {NON_PPN}', '').strip()
-                    qty = int(parts[1].split('  ')[0])
-                    menu_stats[name] = menu_stats.get(name, 0) + qty
-                except: pass
-    
-    top_menus = sorted(menu_stats.items(), key=lambda x: x[1], reverse=True)[:10]
-    top_menu_labels = [m[0] for m in top_menus]
-    top_menu_data = [m[1] for m in top_menus]
-    
-    metode_stats = conn.execute("SELECT LOWER(metode) as metode_clean, COUNT(id) as jumlah FROM orders WHERE status='selesai' AND waktu LIKE ? GROUP BY metode_clean", (today_str + '%',)).fetchall()
+    metode_stats = conn.execute("SELECT LOWER(metode) as metode_clean, COUNT(id) as jumlah FROM orders WHERE status='selesai' AND is_archived=0 GROUP BY metode_clean").fetchall()
     pay_labels = [str(m['metode_clean']).upper() if m['metode_clean'] else 'CASH' for m in metode_stats]
     pay_data = [int(m['jumlah']) for m in metode_stats]
 
@@ -1409,9 +1420,16 @@ def reports():
                             total_cash_cafe = numeric_vals[df_clean['Metode'].str.contains('CASH', na=False, case=False)].sum()
                             total_qris_cafe = numeric_vals[df_clean['Metode'].str.contains('QRIS', na=False, case=False)].sum()
                         else:
-                            # Fallback untuk laporan lama yang belum punya kolom Metode
                             total_cash_cafe = total_pemasukan_cafe
                             total_qris_cafe = 0
+                elif sheet_name == "Pemasukan PT BOS":
+                    kolom_jml = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Nominal'
+                    if kolom_jml in df_clean.columns:
+                        val_pt = df_clean[kolom_jml].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
+                        total_ptbos_file = pd.to_numeric(val_pt, errors='coerce').fillna(0).sum()
+                        # PT BOS dianggap cash masuk ke Resepsionis
+                        total_pemasukan_cafe += total_ptbos_file
+                        total_cash_cafe += total_ptbos_file
                 elif sheet_name == "Pengeluaran":
                     kolom_out = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Total'
                     if kolom_out in df_clean.columns:
@@ -1457,20 +1475,22 @@ def reports():
             except: pass
         except Exception as e: print(f"Error baca file {file}: {e}")
 
-    # HITUNG SALDO DANA TERSIMPAN (MURNI ARSIP - SEMUA PENGELUARAN DANA)
+    # HITUNG SALDO AKHIR
     total_archive_cash = sum(f['summary']['total_cash'] for f in archive_data)
     total_archive_qris = sum(f['summary']['total_qris'] for f in archive_data)
     total_archive_income = sum(f['summary']['total_pemasukan'] for f in archive_data)
     total_archive_expense = sum(f['summary']['total_pengeluaran'] for f in archive_data)
     total_archive_profit = sum(f['summary']['total_pendapatan'] for f in archive_data)
     
-    # Ambil SEMUA pengeluaran khusus dari Dana (akumulatif)
-    expenses_dana_list = conn.execute("SELECT * FROM expenses WHERE source='dana' ORDER BY id DESC").fetchall()
-    expenses_dana_sum = sum(e['jumlah'] for e in expenses_dana_list)
+    # Ambil SEMUA pengeluaran khusus dari Dana/Vault (akumulatif)
+    expenses_dana_list = conn.execute("SELECT * FROM expenses WHERE source IN ('dana', 'reception') ORDER BY id DESC").fetchall()
+    expenses_dana_sum = sum(e['jumlah'] for e in expenses_dana_list if e['source'] == 'dana' or (e['source'] == 'reception' and e['is_archived'] == 1))
     
-    # Saldo Dana Tersimpan = Total Net Cash (Arsip) - Pengeluaran dari Dana
-    # Tidak digabung dengan Hari Ini karena Hari Ini baru masuk arsip besok
-    saldo_dana_tersimpan = total_archive_cash - expenses_dana_sum
+    # Saldo Dana Tersimpan (Vault) = Total Net Cash (Arsip) - Pengeluaran dari Dana masa lalu
+    # Pengeluaran resepsionis hari ini tidak memotong Vault yang sudah tersimpan, tapi memotong Kas Resepsionis Live.
+    saldo_dana_tersimpan = total_archive_cash - sum(e['jumlah'] for e in expenses_dana_list if e['source'] == 'dana')
+    
+    if saldo_dana_tersimpan < 0: saldo_dana_tersimpan = 0
 
     # Ambil Modal Kembalian dari Settings
     modal_kembalian_row = conn.execute("SELECT value FROM settings WHERE key='modal_kembalian'").fetchone()
@@ -1479,24 +1499,22 @@ def reports():
     conn.close()
     
     return render_template('reports.html', 
-                           # Analytics Data
                            total_revenue=revenue_cafe,
                            revenue_ptbos=revenue_ptbos,
                            total_pemasukan_gabungan=total_pemasukan_gabungan,
-                           expenses=total_expenses_cafe,
+                           expenses=expenses_cafe_sum + stock_sum, # Hanya beban cafe
                            profit=profit,
                            saldo_dana_tersimpan=saldo_dana_tersimpan,
                            modal_kembalian=modal_kembalian,
-                           total_cash_live=total_cash_live,
+                           total_cash_cafe_live=total_cash_cafe_live,
+                           total_cash_reception_live=total_cash_reception_live,
                            total_qris_live=total_qris_live,
-                           expenses_live_list=expenses_cafe_list,
+                           expenses_live_list=expenses_cafe_today_list,
                            expenses_dana_list=expenses_dana_list,
-                           stock_expenses_live_list=stock_expenses_live_list,
+                           stock_expenses_live_list=stock_today_list,
                            total_orders=total_orders, avg_order=avg_order, 
                            chart_labels=chart_labels, chart_data=chart_data, 
-                           top_menu_labels=top_menu_labels, top_menu_data=top_menu_data, 
                            pay_labels=pay_labels, pay_data=pay_data,
-                           # Archive Data
                            archive_data=archive_data, rekap_bulanan=rekap_bulanan, rekap_tahunan=rekap_tahunan,
                            total_archive_cash=total_archive_cash, total_archive_qris=total_archive_qris,
                            total_archive_income=total_archive_income, total_archive_expense=total_archive_expense,
@@ -1792,28 +1810,32 @@ def handle_attendance_logic(employee_id, emp_name):
     status = 'success'
     msg = ""
 
-    # Windows:
-    # Masuk: 08:00 - 21:59 (hour 8 to 21)
-    # Pulang: 22:00 - 23:59 (hour 22 to 23)
+    # Logika Fleksibel:
+    # 1. Masuk: Bisa kapan saja (disarankan jam operasional)
+    # 2. Pulang: Jika jam 00:00 - 04:00 pagi, cari absen masuk kemarin. 
+    #    Jika jam > 04:00, cari absen masuk hari ini.
     
-    if 8 <= hour <= 21:
-        if not existing:
-            conn.execute("INSERT INTO attendance (employee_id, tanggal, jam_masuk) VALUES (?, ?, ?)",
-                         (employee_id, today, waktu_now))
-            msg = f"Selamat Bekerja, {emp_name}! (Masuk: {waktu_now})"
-        else:
-            msg = f"Sudah Absen Masuk hari ini pada {existing['jam_masuk']}."
-    elif 22 <= hour <= 23:
-        if not existing:
-            msg = f"Belum ada data Absen Masuk untuk {emp_name} hari ini. Harap hubungi admin."
-            status = 'error'
-        elif existing['jam_pulang']:
-            msg = f"Sudah Absen Pulang hari ini pada {existing['jam_pulang']}."
-        else:
-            conn.execute("UPDATE attendance SET jam_pulang=? WHERE id=?", (waktu_now, existing['id']))
-            msg = f"Hati-hati di jalan, {emp_name}! (Pulang: {waktu_now})"
+    if 0 <= hour <= 4:
+        # Sedang lewat tengah malam, cari absen masuk kemarin
+        target_date = (now - timedelta(days=1)).strftime("%d-%m-%Y")
     else:
-        msg = f"Portal Absensi Belum Dibuka. (Tersedia Jam 08:00 - 23:59)"
+        target_date = today
+
+    existing = conn.execute("SELECT * FROM attendance WHERE employee_id=? AND tanggal=?", 
+                           (employee_id, target_date)).fetchone()
+
+    if not existing:
+        # Jika belum ada absen di tanggal target, maka ini dianggap Absen Masuk baru
+        conn.execute("INSERT INTO attendance (employee_id, tanggal, jam_masuk) VALUES (?, ?, ?)",
+                     (employee_id, today, waktu_now))
+        msg = f"Selamat Bekerja, {emp_name}! (Masuk: {waktu_now})"
+    elif not existing['jam_pulang']:
+        # Jika sudah masuk tapi belum pulang, maka ini Absen Pulang
+        conn.execute("UPDATE attendance SET jam_pulang=? WHERE id=?", (waktu_now, existing['id']))
+        msg = f"Hati-hati di jalan, {emp_name}! (Pulang: {waktu_now} - Sesi {target_date})"
+    else:
+        # Jika sudah masuk dan sudah pulang
+        msg = f"Anda sudah menyelesaikan absensi untuk sesi {target_date}."
         status = 'error'
         
     conn.commit()
