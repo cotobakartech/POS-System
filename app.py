@@ -842,124 +842,122 @@ def archive():
     # Membuat nama file dengan stempel waktu
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f"Laporan_CafeBos_{timestamp}.xlsx"
-    writer = pd.ExcelWriter(filename, engine='openpyxl')
 
     # --- PROSES GENERATE EXCEL ---
     try:
-        # --- SHEET PEMASUKAN ---
-        if orders:
-            data_pemasukan = []
-            for row in orders:
-                order_dict = dict(row)
-                
-                # Parsing rincian menu dari string database (format: Nama\nQty Harga Subtotal)
-                menu_data = order_dict['menu'].split('|')
-                subtotal_asli = 0
-                total_dikenakan_ppn = 0
-                list_menu_untuk_excel = []
-                
-                for item in menu_data:
-                    if "TOTAL_QTY:" not in item and "\n" in item:
-                        try:
-                            parts = item.split('\n')
-                            nama_menu_lengkap = parts[0]
-                            
-                            # Cek apakah item kena PPN
-                            kena_ppn = "{NON_PPN}" not in nama_menu_lengkap
-                            
-                            values = parts[1].split('  ')
-                            qty_item = values[0]
-                            sub_item = int(values[2])
-                            
-                            subtotal_asli += sub_item
-                            if kena_ppn:
-                                total_dikenakan_ppn += sub_item
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            # --- SHEET PEMASUKAN ---
+            if orders:
+                data_pemasukan = []
+                for row in orders:
+                    order_dict = dict(row)
+                    
+                    # Parsing rincian menu dari string database (format: Nama\nQty Harga Subtotal)
+                    menu_data = order_dict['menu'].split('|')
+                    subtotal_asli = 0
+                    total_dikenakan_ppn = 0
+                    list_menu_untuk_excel = []
+                    
+                    for item in menu_data:
+                        if "TOTAL_QTY:" not in item and "\n" in item:
+                            try:
+                                parts = item.split('\n')
+                                nama_menu_lengkap = parts[0]
                                 
-                            list_menu_untuk_excel.append(f"{nama_menu_lengkap.replace('{NON_PPN}', '').strip()} (x{qty_item})")
-                        except:
-                            pass
+                                # Cek apakah item kena PPN
+                                kena_ppn = "{NON_PPN}" not in nama_menu_lengkap
+                                
+                                values = parts[1].split('  ')
+                                qty_item = values[0]
+                                sub_item = int(values[2])
+                                
+                                subtotal_asli += sub_item
+                                if kena_ppn:
+                                    total_dikenakan_ppn += sub_item
+                                    
+                                list_menu_untuk_excel.append(f"{nama_menu_lengkap.replace('{NON_PPN}', '').strip()} (x{qty_item})")
+                            except:
+                                pass
+                    
+                    # Hitung PPN hanya dari item yang kena pajak
+                    ppn_10 = int(total_dikenakan_ppn * 0.10)
+                    total_akhir_bayar = order_dict['total']
+                    selisih_bulat = (subtotal_asli + ppn_10) - total_akhir_bayar
+
+                    data_pemasukan.append({
+                        'Waktu': order_dict['waktu'],
+                        'Meja': order_dict['meja'],
+                        'Kasir': order_dict.get('kasir', 'Admin'),
+                        'Metode': order_dict.get('metode', 'CASH').upper(),
+                        'Menu Orderan': ", ".join(list_menu_untuk_excel),
+                        'Subtotal (Asli)': subtotal_asli,
+                        'PPN (10%)': ppn_10,
+                        'Pembulatan': -selisih_bulat if selisih_bulat != 0 else 0,
+                        'Total Bayar': total_akhir_bayar
+                    })
                 
-                # Hitung PPN hanya dari item yang kena pajak
-                ppn_10 = int(total_dikenakan_ppn * 0.10)
-                total_akhir_bayar = order_dict['total']
-                selisih_bulat = (subtotal_asli + ppn_10) - total_akhir_bayar
+                df_orders = pd.DataFrame(data_pemasukan)
 
-                data_pemasukan.append({
-                    'Waktu': order_dict['waktu'],
-                    'Meja': order_dict['meja'],
-                    'Kasir': order_dict.get('kasir', 'Admin'),
-                    'Metode': order_dict.get('metode', 'CASH').upper(),
-                    'Menu Orderan': ", ".join(list_menu_untuk_excel),
-                    'Subtotal (Asli)': subtotal_asli,
-                    'PPN (10%)': ppn_10,
-                    'Pembulatan': -selisih_bulat if selisih_bulat != 0 else 0,
-                    'Total Bayar': total_akhir_bayar
-                })
-            
-            df_orders = pd.DataFrame(data_pemasukan)
-
-            # --- LOGIKA AUTO-SUM PEMASUKAN ---
-            total_row = {
-                'Waktu': 'TOTAL KESELURUHAN',
-                'Meja': '',
-                'Kasir': '',
-                'Metode': '',
-                'Menu Orderan': '',
-                'Subtotal (Asli)': df_orders['Subtotal (Asli)'].sum(),
-                'PPN (10%)': df_orders['PPN (10%)'].sum(),
-                'Pembulatan': df_orders['Pembulatan'].sum(),
-                'Total Bayar': df_orders['Total Bayar'].sum()
-            }
-            
-            df_orders = pd.concat([df_orders, pd.DataFrame([total_row])], ignore_index=True)
-            df_orders.to_excel(writer, sheet_name='Pemasukan', index=False)
-
-        # --- SHEET PENGELUARAN ---
-        if expenses:
-            data_exp = []
-            for row in expenses:
-                exp_dict = dict(row)
-                data_exp.append({
-                    'Keterangan': exp_dict['keterangan'],
-                    'Jumlah': exp_dict['jumlah'],
-                    'Waktu': exp_dict['waktu']
-                })
+                # --- LOGIKA AUTO-SUM PEMASUKAN ---
+                total_row = {
+                    'Waktu': 'TOTAL KESELURUHAN',
+                    'Meja': '',
+                    'Kasir': '',
+                    'Metode': '',
+                    'Menu Orderan': '',
+                    'Subtotal (Asli)': df_orders['Subtotal (Asli)'].sum(),
+                    'PPN (10%)': df_orders['PPN (10%)'].sum(),
+                    'Pembulatan': df_orders['Pembulatan'].sum(),
+                    'Total Bayar': df_orders['Total Bayar'].sum()
+                }
                 
-            df_exp = pd.DataFrame(data_exp)
+                df_orders = pd.concat([df_orders, pd.DataFrame([total_row])], ignore_index=True)
+                df_orders.to_excel(writer, sheet_name='Pemasukan', index=False)
 
-            # --- LOGIKA AUTO-SUM PENGELUARAN ---
-            total_exp_row = {
-                'Keterangan': 'TOTAL PENGELUARAN',
-                'Jumlah': df_exp['Jumlah'].sum(),
-                'Waktu': ''
-            }
-            df_exp = pd.concat([df_exp, pd.DataFrame([total_exp_row])], ignore_index=True)
-            df_exp.to_excel(writer, sheet_name='Pengeluaran', index=False)
+            # --- SHEET PENGELUARAN ---
+            if expenses:
+                data_exp = []
+                for row in expenses:
+                    exp_dict = dict(row)
+                    data_exp.append({
+                        'Keterangan': exp_dict['keterangan'],
+                        'Jumlah': exp_dict['jumlah'],
+                        'Waktu': exp_dict['waktu']
+                    })
+                    
+                df_exp = pd.DataFrame(data_exp)
 
-        # --- SHEET PEMASUKAN PT BOS ---
-        if pemasukan_ptbos:
-            data_ptbos = []
-            for row in pemasukan_ptbos:
-                r = dict(row)
-                data_ptbos.append({
-                    'Keterangan': r['keterangan'],
-                    'Jumlah': r['jumlah'],
-                    'Waktu': r['waktu']
-                })
+                # --- LOGIKA AUTO-SUM PENGELUARAN ---
+                total_exp_row = {
+                    'Keterangan': 'TOTAL PENGELUARAN',
+                    'Jumlah': df_exp['Jumlah'].sum(),
+                    'Waktu': ''
+                }
+                df_exp = pd.concat([df_exp, pd.DataFrame([total_exp_row])], ignore_index=True)
+                df_exp.to_excel(writer, sheet_name='Pengeluaran', index=False)
 
-            df_ptbos = pd.DataFrame(data_ptbos)
+            # --- SHEET PEMASUKAN PT BOS ---
+            if pemasukan_ptbos:
+                data_ptbos = []
+                for row in pemasukan_ptbos:
+                    r = dict(row)
+                    data_ptbos.append({
+                        'Keterangan': r['keterangan'],
+                        'Jumlah': r['jumlah'],
+                        'Waktu': r['waktu']
+                    })
 
-            total_row = {
-                'Keterangan': 'TOTAL PEMASUKAN PT BOS',
-                'Jumlah': df_ptbos['Jumlah'].sum(),
-                'Waktu': ''
-            }
+                df_ptbos = pd.DataFrame(data_ptbos)
 
-            df_ptbos = pd.concat([df_ptbos, pd.DataFrame([total_row])], ignore_index=True)
-            df_ptbos.to_excel(writer, sheet_name='Pemasukan PT BOS', index=False)
+                total_row = {
+                    'Keterangan': 'TOTAL PEMASUKAN PT BOS',
+                    'Jumlah': df_ptbos['Jumlah'].sum(),
+                    'Waktu': ''
+                }
 
-        # Simpan file Excel
-        writer._save()
+                df_ptbos = pd.concat([df_ptbos, pd.DataFrame([total_row])], ignore_index=True)
+                df_ptbos.to_excel(writer, sheet_name='Pemasukan PT BOS', index=False)
+
         
         # Verifikasi file berhasil disimpan sebelum menghapus data
         if not os.path.exists(filename) or os.path.getsize(filename) < 100:
@@ -989,6 +987,83 @@ def archive():
         conn.close()
 
     return redirect('/admin?status=archived')
+
+@app.route('/delete_archive/<filename>', methods=['POST'])
+@login_required
+def delete_archive(filename):
+    path = os.path.join('.', filename)
+    if os.path.exists(path) and filename.startswith('Laporan_CafeBos_') and filename.endswith('.xlsx'):
+        import time
+        for i in range(5): # Retry up to 5 times
+            try:
+                os.remove(path)
+                
+                # Hapus juga bukti yang berpasangan jika ada
+                bukti_filename = filename.replace('.xlsx', '.jpg')
+                bukti_cash_path = os.path.join('static/uploads/bukti_cash', bukti_filename)
+                bukti_nota_path = os.path.join('static/uploads/bukti_nota', bukti_filename)
+                
+                if os.path.exists(bukti_cash_path):
+                    os.remove(bukti_cash_path)
+                if os.path.exists(bukti_nota_path):
+                    os.remove(bukti_nota_path)
+                    
+                return redirect('/reports?tab=archive&status=deleted')
+            except OSError as e:
+                if i == 4: # Last attempt
+                    print(f"Error deleting archive {filename}: {e}")
+                    return f"Gagal menghapus file (sedang digunakan proses lain): {e}", 500
+                time.sleep(0.5) # Wait half a second before retry
+        
+    return "File tidak valid", 400
+
+
+@app.route('/rename_archive/<filename>', methods=['POST'])
+@login_required
+def rename_archive(filename):
+    new_name = request.form.get('new_name')
+    if not new_name:
+        return redirect('/reports?tab=archive&status=error_no_name')
+    
+    # Pastikan extensi .xlsx tetap ada
+    if not new_name.endswith('.xlsx'):
+        new_name += '.xlsx'
+        
+    old_path = os.path.join('.', filename)
+    new_path = os.path.join('.', new_name)
+    
+    if os.path.exists(old_path) and filename.startswith('Laporan_CafeBos_') and filename.endswith('.xlsx'):
+        import time
+        for i in range(5): # Retry up to 5 times
+            try:
+                # Rename file Excel
+                os.rename(old_path, new_path)
+                
+                # Rename juga bukti yang berpasangan jika ada
+                old_bukti = filename.replace('.xlsx', '.jpg')
+                new_bukti = new_name.replace('.xlsx', '.jpg')
+                
+                bukti_cash_old = os.path.join('static/uploads/bukti_cash', old_bukti)
+                bukti_cash_new = os.path.join('static/uploads/bukti_cash', new_bukti)
+                
+                bukti_nota_old = os.path.join('static/uploads/bukti_nota', old_bukti)
+                bukti_nota_new = os.path.join('static/uploads/bukti_nota', new_bukti)
+                
+                if os.path.exists(bukti_cash_old):
+                    os.rename(bukti_cash_old, bukti_cash_new)
+                if os.path.exists(bukti_nota_old):
+                    os.rename(bukti_nota_old, bukti_nota_new)
+                    
+                return redirect('/reports?tab=archive&status=renamed')
+            except OSError as e:
+                if i == 4: # Last attempt
+                    print(f"Error renaming archive {filename} to {new_name}: {e}")
+                    return f"Gagal mengganti nama file (sedang digunakan proses lain): {e}", 500
+                time.sleep(0.5)
+    return "File tidak valid atau tidak ditemukan", 400
+
+
+
 
 @app.route('/add_expense', methods=['POST'])
 @login_required
@@ -1397,46 +1472,46 @@ def reports():
     for file in sorted(files, reverse=True):
         path = os.path.join(folder_path, file)
         try:
-            xls = pd.ExcelFile(path)
-            sheets_data = []
-            total_pemasukan_cafe = 0
-            total_cash_cafe = 0
-            total_qris_cafe = 0
-            total_pengeluaran = 0
+            with pd.ExcelFile(path) as xls:
+                sheets_data = []
+                total_pemasukan_cafe = 0
+                total_cash_cafe = 0
+                total_qris_cafe = 0
+                total_pengeluaran = 0
 
-            for sheet_name in xls.sheet_names:
-                df = pd.read_excel(xls, sheet_name=sheet_name)
-                if not df.empty:
-                    kolom_pertama = df.columns[0]
-                    df_clean = df[~df[kolom_pertama].astype(str).str.contains('TOTAL', case=False, na=False)].copy()
-                else: df_clean = df.copy()
+                for sheet_name in xls.sheet_names:
+                    df = pd.read_excel(xls, sheet_name=sheet_name)
+                    if not df.empty:
+                        kolom_pertama = df.columns[0]
+                        df_clean = df[~df[kolom_pertama].astype(str).str.contains('TOTAL', case=False, na=False)].copy()
+                    else: df_clean = df.copy()
 
-                if sheet_name == "Pemasukan":
-                    if 'Total Bayar' in df_clean.columns:
-                        val_series = df_clean['Total Bayar'].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
-                        numeric_vals = pd.to_numeric(val_series, errors='coerce').fillna(0)
-                        total_pemasukan_cafe = numeric_vals.sum()
-                        if 'Metode' in df_clean.columns:
-                            total_cash_cafe = numeric_vals[df_clean['Metode'].str.contains('CASH', na=False, case=False)].sum()
-                            total_qris_cafe = numeric_vals[df_clean['Metode'].str.contains('QRIS', na=False, case=False)].sum()
-                        else:
-                            total_cash_cafe = total_pemasukan_cafe
-                            total_qris_cafe = 0
-                elif sheet_name == "Pemasukan PT BOS":
-                    kolom_jml = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Nominal'
-                    if kolom_jml in df_clean.columns:
-                        val_pt = df_clean[kolom_jml].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
-                        total_ptbos_file = pd.to_numeric(val_pt, errors='coerce').fillna(0).sum()
-                        # PT BOS dianggap cash masuk ke Resepsionis
-                        total_pemasukan_cafe += total_ptbos_file
-                        total_cash_cafe += total_ptbos_file
-                elif sheet_name == "Pengeluaran":
-                    kolom_out = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Total'
-                    if kolom_out in df_clean.columns:
-                        val_out = df_clean[kolom_out].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
-                        total_pengeluaran = pd.to_numeric(val_out, errors='coerce').fillna(0).sum()
+                    if sheet_name == "Pemasukan":
+                        if 'Total Bayar' in df_clean.columns:
+                            val_series = df_clean['Total Bayar'].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
+                            numeric_vals = pd.to_numeric(val_series, errors='coerce').fillna(0)
+                            total_pemasukan_cafe = numeric_vals.sum()
+                            if 'Metode' in df_clean.columns:
+                                total_cash_cafe = numeric_vals[df_clean['Metode'].str.contains('CASH', na=False, case=False)].sum()
+                                total_qris_cafe = numeric_vals[df_clean['Metode'].str.contains('QRIS', na=False, case=False)].sum()
+                            else:
+                                total_cash_cafe = total_pemasukan_cafe
+                                total_qris_cafe = 0
+                    elif sheet_name == "Pemasukan PT BOS":
+                        kolom_jml = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Nominal'
+                        if kolom_jml in df_clean.columns:
+                            val_pt = df_clean[kolom_jml].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
+                            total_ptbos_file = pd.to_numeric(val_pt, errors='coerce').fillna(0).sum()
+                            # PT BOS dianggap cash masuk ke Resepsionis
+                            total_pemasukan_cafe += total_ptbos_file
+                            total_cash_cafe += total_ptbos_file
+                    elif sheet_name == "Pengeluaran":
+                        kolom_out = 'Jumlah' if 'Jumlah' in df_clean.columns else 'Total'
+                        if kolom_out in df_clean.columns:
+                            val_out = df_clean[kolom_out].astype(str).str.replace('.', '', regex=False).str.replace(',', '', regex=False)
+                            total_pengeluaran = pd.to_numeric(val_out, errors='coerce').fillna(0).sum()
 
-                sheets_data.append({'nama_sheet': sheet_name, 'kolom': df.columns.tolist(), 'data': df.fillna('').values.tolist()})
+                    sheets_data.append({'nama_sheet': sheet_name, 'kolom': df.columns.tolist(), 'data': df.fillna('').values.tolist()})
 
             summary = {
                 'total_pemasukan': total_pemasukan_cafe,
@@ -1529,20 +1604,20 @@ def settle_dana():
     total_archive_cash = 0
     for file in files:
         try:
-            xls = pd.ExcelFile(file)
-            pemasukan_df = pd.read_excel(xls, 'Pemasukan')
-            pengeluaran_df = pd.read_excel(xls, 'Pengeluaran')
-            
-            # Pemasukan Cash
-            cash_vals = pd.to_numeric(pemasukan_df[pemasukan_df['Metode'].str.contains('CASH', na=False, case=False)]['Total Bayar'].astype(str).str.replace('.', ''), errors='coerce').fillna(0)
-            total_cash = cash_vals.sum()
-            
-            # Pengeluaran
-            kolom_out = 'Jumlah' if 'Jumlah' in pengeluaran_df.columns else 'Total'
-            out_vals = pd.to_numeric(pengeluaran_df[kolom_out].astype(str).str.replace('.', ''), errors='coerce').fillna(0)
-            total_out = out_vals.sum()
-            
-            total_archive_cash += (total_cash - total_out)
+            with pd.ExcelFile(file) as xls:
+                pemasukan_df = pd.read_excel(xls, 'Pemasukan')
+                pengeluaran_df = pd.read_excel(xls, 'Pengeluaran')
+                
+                # Pemasukan Cash
+                cash_vals = pd.to_numeric(pemasukan_df[pemasukan_df['Metode'].str.contains('CASH', na=False, case=False)]['Total Bayar'].astype(str).str.replace('.', ''), errors='coerce').fillna(0)
+                total_cash = cash_vals.sum()
+                
+                # Pengeluaran
+                kolom_out = 'Jumlah' if 'Jumlah' in pengeluaran_df.columns else 'Total'
+                out_vals = pd.to_numeric(pengeluaran_df[kolom_out].astype(str).str.replace('.', ''), errors='coerce').fillna(0)
+                total_out = out_vals.sum()
+                
+                total_archive_cash += (total_cash - total_out)
         except: pass
     
     # 2. Kurangi dengan pengeluaran dana yang sudah ada
@@ -1588,25 +1663,24 @@ def download_pdf(filename):
         return "File tidak ditemukan", 404
 
     try:
-        xls = pd.ExcelFile(path)
-        
-        # Cari bukti yang berpasangan
-        bukti_cash_path = os.path.join('static/uploads/bukti_cash', filename.replace('.xlsx', '.jpg'))
-        bukti_nota_path = os.path.join('static/uploads/bukti_nota', filename.replace('.xlsx', '.jpg'))
-        
-        bukti_c_full = bukti_cash_path if os.path.exists(bukti_cash_path) else None
-        bukti_n_full = bukti_nota_path if os.path.exists(bukti_nota_path) else None
-        
-        pdf = generate_report_pdf(filename, xls, bukti_cash_path=bukti_c_full, bukti_nota_path=bukti_n_full)
+        with pd.ExcelFile(path) as xls:
+            # Cari bukti yang berpasangan
+            bukti_cash_path = os.path.join('static/uploads/bukti_cash', filename.replace('.xlsx', '.jpg'))
+            bukti_nota_path = os.path.join('static/uploads/bukti_nota', filename.replace('.xlsx', '.jpg'))
+            
+            bukti_c_full = bukti_cash_path if os.path.exists(bukti_cash_path) else None
+            bukti_n_full = bukti_nota_path if os.path.exists(bukti_nota_path) else None
+            
+            pdf = generate_report_pdf(filename, xls, bukti_cash_path=bukti_c_full, bukti_nota_path=bukti_n_full)
 
-        # Output to buffer
-        pdf_output = io.BytesIO()
-        pdf_bytes = pdf.output(dest='S')
-        pdf_output.write(pdf_bytes)
-        pdf_output.seek(0)
-        
-        pdf_filename = filename.replace('.xlsx', '.pdf')
-        return send_file(pdf_output, as_attachment=True, download_name=pdf_filename, mimetype='application/pdf')
+            # Output to buffer
+            pdf_output = io.BytesIO()
+            pdf_bytes = pdf.output(dest='S')
+            pdf_output.write(pdf_bytes)
+            pdf_output.seek(0)
+            
+            pdf_filename = filename.replace('.xlsx', '.pdf')
+            return send_file(pdf_output, as_attachment=True, download_name=pdf_filename, mimetype='application/pdf')
 
     except Exception as e:
         print(f"Error generate PDF: {e}")

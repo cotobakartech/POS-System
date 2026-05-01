@@ -637,10 +637,20 @@
                                 onclick="openUploadFromBtn(this, event)">
                                 📷 {{ 'LENGKAP' if file.has_bukti_cash and file.has_bukti_nota else 'UPLOAD' }}
                             </button>
+                            <button class="btn-icon" onclick="openRenameModal('{{ file.nama_file }}', event)" style="color: var(--secondary-gold); border-color: rgba(245, 158, 11, 0.2);">
+                                ✏️ RENAME
+                            </button>
                             <a href="/download_pdf/{{ file.nama_file }}" class="btn-icon"
                                 onclick="event.stopPropagation()">
                                 📄 PDF
                             </a>
+                            <form action="/delete_archive/{{ file.nama_file }}" method="POST" 
+                                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan ini secara permanen?')" 
+                                  style="display: inline;" onclick="event.stopPropagation()">
+                                <button type="submit" class="btn-icon" style="color: var(--accent-red); border-color: rgba(244, 63, 94, 0.2);">
+                                    🗑️ HAPUS
+                                </button>
+                            </form>
                             <span class="chevron" style="color: var(--text-dim)">▼</span>
                         </div>
                     </div>
@@ -938,7 +948,31 @@
         </div>
     </div>
 
+    <!-- MODAL RENAME -->
+    <div id="renameModal" class="modal">
+        <div class="modal-body">
+            <h3 style="margin: 0; font-weight: 800;">Ganti Nama Laporan ✏️</h3>
+            <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">Masukkan nama baru untuk file laporan ini.</p>
+
+            <form id="renameForm" action="" method="POST">
+                <div class="upload-section">
+                    <label style="font-size: 11px; font-weight: 800; color: var(--text-dim);">NAMA FILE BARU</label>
+                    <input type="text" name="new_name" id="newNameInput" placeholder="Laporan_CafeBos_..." required
+                        style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white; margin-top: 5px;">
+                    <p style="font-size: 10px; color: var(--text-dim); margin-top: 5px;">* Ekstensi .xlsx akan ditambahkan otomatis jika tidak ada.</p>
+                </div>
+
+                <div class="modal-footer" style="margin-top: 25px; display: flex; gap: 10px;">
+                    <button type="button" class="btn-ghost" onclick="closeRenameModal()"
+                        style="flex: 1; cursor: pointer;">BATAL</button>
+                    <button type="submit" class="btn-primary" style="flex: 1; cursor: pointer;">SIMPAN PERUBAHAN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL QUICK EXPENSE -->
+
     <div id="quickExpenseModal" class="modal">
         <div class="modal-body">
             <h3 style="margin: 0; font-weight: 800;">Input Pengeluaran 💸</h3>
@@ -1017,8 +1051,21 @@
         window.onclick = function (event) {
             const uploadModal = document.getElementById('uploadModal');
             const expenseModal = document.getElementById('quickExpenseModal');
+            const renameModal = document.getElementById('renameModal');
             if (event.target == uploadModal) closeModal();
             if (event.target == expenseModal) closeQuickExpense();
+            if (event.target == renameModal) closeRenameModal();
+        }
+
+        function openRenameModal(filename, e) {
+            e.stopPropagation();
+            document.getElementById('renameForm').action = '/rename_archive/' + filename;
+            document.getElementById('newNameInput').value = filename;
+            document.getElementById('renameModal').style.display = 'flex';
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameModal').style.display = 'none';
         }
 
         function toggleReport(idx) {

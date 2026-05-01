@@ -319,11 +319,9 @@
             <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span class="meja-badge" onclick="editMeja('{{ o.id }}', '{{ o.meja }}')" style="cursor: pointer;" title="Klik untuk pindah meja">MEJA {{ o.meja }} ✏️</span>
-                    {% if o.status == 'pending' %}
                     <form action="/delete_order/{{ o.id }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus/Batalkan pesanan Meja {{ o.meja }}?')">
                         <button type="submit" style="background: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">✖ BATAL</button>
                     </form>
-                    {% endif %}
                 </div>
                 <span class="status-text {{ 'pending-text' if o.status=='pending' else 'done-text' }}">
                     {% if o.status == 'pending' %}
