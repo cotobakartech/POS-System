@@ -130,9 +130,8 @@ def generate_report_pdf(filename, xls, bukti_cash_path=None, bukti_nota_path=Non
 
         pw = pdf.w - 2 * pdf.l_margin # Total lebar tersedia: 273mm
         if sn == "Pemasukan":
-            # Menyamakan total lebar ke 273mm agar sejajar dengan tabel pengeluaran
-            # Waktu(26), Meja(10), Kasir(22), Metode(18), Menu(90), Sub(25), PPN(25), Bulat(25), Total(32)
-            widths = [26, 10, 22, 18, 90, 25, 25, 25, 32] # Total = 273mm
+            # Waktu(26), Antrian(12), Pelanggan(40), Kasir(25), Metode(20), Menu(100), Total(50)
+            widths = [26, 12, 40, 25, 20, 100, 50] # Total = 273mm
         elif sn == "Pengeluaran":
             widths = [pw*0.6, pw*0.2, pw*0.2] # Total = 273mm
         else:

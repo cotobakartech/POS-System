@@ -1,311 +1,181 @@
 <!DOCTYPE html>
-<html>
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="refresh" content="120"> 
-    <title>Dashboard Kasir 🐝</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System by COTOBAKARTECH - Cashier Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="page-admin">
 
-<div class="menu-trigger" onclick="toggleSidebar()">☰</div>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar glass">
+        <div style="margin-bottom: 40px; text-align: center;">
+            <h2 style="font-weight: 800; letter-spacing: -1px; color: var(--accent);">CASHIER HUB</h2>
+            <p style="font-size: 12px; color: var(--text-secondary);">POS System by COTOBAKARTECH</p>
+        </div>
 
-<div id="sidebarOverlay" class="overlay" onclick="toggleSidebar()"></div>
-
-<div id="mySidebar" class="sidebar">
-    <span class="close-btn" onclick="toggleSidebar()">×</span>
-    <div class="sidebar-content">
-        <h2 style="color: #333; border-bottom: 2px solid #ffcc00; padding-bottom: 10px; margin-top: 0;">Pengaturan</h2>
-
-        <div class="card collapsed" id="sectionMenu">
-            <div class="section-header" onclick="toggleSection('sectionMenu')">
-                <h3 style="margin: 0; font-size: 14px;">➕ Kelola Menu</h3>
-                <span class="arrow">▼</span>
+        <nav style="display: flex; flex-direction: column; gap: 10px;">
+            <div id="navDashboard" class="sidebar-item active" onclick="switchAdminTab('dashboard')">
+                <i class="fas fa-th-large"></i> Dashboard
             </div>
-            <div class="menu-content">
-                <!-- FORM TAMBAH MENU YANG LEBIH RAPI -->
-                <form action="/add_menu" method="POST" enctype="multipart/form-data" class="form-add-modern">
-                    <input type="text" name="nama" placeholder="Nama Menu Baru..." required>
-                    <div class="form-group-row">
-                        <input type="number" name="harga" placeholder="Harga (Rp)" required>
-                        <select name="kategori">
-                            <option value="COFFEE">COFFEE</option>
-                            <option value="MILK FLAVOR LATTE">MILK FLAVOR LATTE</option>
-                            <option value="OTHERS">OTHERS</option>
-                            <option value="FOOD & SNACK">FOOD & SNACK</option>
+            <div id="navMenu" class="sidebar-item" onclick="switchAdminTab('menu')">
+                <i class="fas fa-utensils"></i> Kelola Menu
+            </div>
+            <div id="navRecipe" class="sidebar-item" onclick="switchAdminTab('recipe')">
+                <i class="fas fa-list-check"></i> Kelola Resep
+            </div>
+            <a href="/inventory" class="sidebar-item">
+                <i class="fas fa-boxes"></i> Inventaris
+            </a>
+            <a href="/reports" class="sidebar-item">
+                <i class="fas fa-chart-bar"></i> Laporan
+            </a>
+            <a href="/logout" class="sidebar-item" style="color: #ef4444; margin-top: 10px;">
+                <i class="fas fa-sign-out-alt" style="color: #ef4444;"></i> Keluar
+            </a>
+        </nav>
+
+        <div style="margin-top: auto; padding-top: 30px;">
+            <div class="glass" style="padding: 15px; border-radius: 12px;">
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">MODE TAMPILAN</p>
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;" onclick="toggleTheme()">
+                    <i class="fas fa-moon" id="themeIcon"></i> <span id="themeText">Lighting Mode</span>
+                </button>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">PENGATURAN SUARA</p>
+                <select id="voiceSelect" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px;">
+                    <option>Memuat suara...</option>
+                </select>
+                <div style="margin-top: 20px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">PRINTER THERMAL</p>
+                    <form action="/save_printer_settings" method="POST">
+                        <label style="font-size: 11px; color: var(--text-secondary);">Pilih Printer</label>
+                        <select name="thermal_printer_name" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px; margin-bottom: 10px;">
+                            {% if printer_list %}
+                                {% for printer in printer_list %}
+                                <option value="{{ printer }}" {% if printer == selected_printer %}selected{% endif %}>{{ printer }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="">Tidak ada printer terdeteksi</option>
+                            {% endif %}
                         </select>
-                    </div>
-                    <div class="topping-section">
-                        <label style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 5px; display: block;">TOPPING & HARGA (Opsional):</label>
-                        <div id="toppingRows">
-                            <!-- JS will add rows here -->
-                        </div>
-                        <button type="button" onclick="addToppingRow()" style="width: 100%; background: #fff; border: 1px solid #ffcc00; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; color: #333;">
-                            + Tambah Topping
-                        </button>
-                    </div>
-                    <input type="hidden" name="topping" id="hiddenTopping">
-                    <input type="hidden" name="harga_topping" id="hiddenHargaTopping">
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-                        <label style="font-size: 11px; font-weight: bold; color: #666;">UPLOAD GAMBAR:</label>
-                        <input type="file" name="file_gambar" accept="image/*" style="font-size: 12px;">
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-top: 5px;">
-                        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="checkbox" name="has_opt" style="width: auto;"> Opsi Es/Gula
-                        </label>
-                        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #d32f2f; font-weight: bold;">
-                            <input type="checkbox" name="use_ppn" value="1" checked style="width: auto;"> PPN 10% 🧾
-                        </label>
-                        <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; color: #d4af37; font-weight: bold;">
-                            <input type="checkbox" name="show_on_tv" style="width: auto;"> Tampilkan di TV 📺
-                        </label>
-                    </div>
-                    <button type="submit" onclick="prepareToppingData()" style="width: 100%; background:#333; color:#ffcc00; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor: pointer; margin-top: 5px;">
-                        SIMPAN MENU BARU
-                    </button>
-                </form>
-
-                <!-- FITUR CARI MENU -->
-                <div class="search-container">
-                    <input type="text" id="menuSearchInput" class="search-input" placeholder="Cari menu di sini..." onkeyup="filterMenus()">
-                    <span class="search-icon">🔍</span>
-                </div>
-
-                <div class="menu-scroll-area">
-                    {% for cat in ['COFFEE', 'MILK FLAVOR LATTE', 'OTHERS', 'FOOD & SNACK'] %}
-                    <div class="cat-title menu-cat-group">{{ cat.upper() }}</div>
-                    <div class="menu-items-group" style="margin-top: 5px;">
-                        {% for m in menus if m.kategori == cat %}
-                        <div class="menu-list-item" data-name="{{ m.nama|lower }}">
-                            <div class="menu-info" 
-                                 data-id="{{ m.id }}" 
-                                 data-nama="{{ m.nama }}" 
-                                 data-harga="{{ m.harga }}" 
-                                 data-kategori="{{ m.kategori }}" 
-                                 data-gambar="{{ m.gambar or '' }}" 
-                                 data-tv="{{ m.show_on_tv }}"
-                                 data-ppn="{{ m.use_ppn }}"
-                                 onclick="handleEditMenu(this)"
-                                 style="cursor: pointer; flex: 1;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-weight: 500;">{{ m.nama }} ✏️</span>
-                                    {% if m.show_on_tv %}<span title="Tampil di TV" style="font-size: 12px;">📺</span>{% endif %}
-                                </div>
-                                <span class="menu-price">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</span>
-                            </div>
-                            <form action="/del_menu/{{ m.id }}" method="POST" style="display:inline;" onsubmit="return confirm('Hapus {{ m.nama }}?')">
-                                <button type="submit" class="btn-del-menu" style="background:none; border:none; cursor:pointer; padding:5px;">×</button>
-                            </form>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="card collapsed" id="sectionPTBOS">
-            <div class="section-header" onclick="toggleSection('sectionPTBOS')">
-                <h3 style="margin: 0; font-size: 14px;">📈 Produk PT. BOS</h3>
-                <span class="arrow">▼</span>
-            </div>
-            <div class="menu-content">
-                <form action="/add_pemasukan_ptbos" method="POST" style="display:grid; gap:8px; margin-top:10px;">
-                    <input type="text" name="nama_pembeli" placeholder="Nama pembeli..." required>
-                    <input type="text" name="nama_barang" placeholder="Nama barang..." required>
-                    <input type="text" name="jumlah_nominal" placeholder="Nominal" required oninput="formatRupiah(this)">
-                    <button type="submit" style="background:#ffcc00; color:black; border:none; padding:10px; border-radius:8px; font-weight:bold;">SUBMIT</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card collapsed" id="sectionExpense">
-            <div class="section-header" onclick="toggleSection('sectionExpense')">
-                <h3 style="margin: 0; font-size: 14px;">💸 Pengeluaran Cafe</h3>
-                <span class="arrow">▼</span>
-            </div>
-            <div class="menu-content">
-                <form action="/add_expense" method="POST" style="display:grid; gap:8px; margin-top:10px;">
-                    <input type="hidden" name="source" value="cafe">
-                    <input type="text" name="keterangan" placeholder="Keterangan (misal: Beli Galon)..." required>
-                    <input type="text" name="jumlah" placeholder="Nominal" required oninput="formatRupiah(this)">
-                    <button type="submit" style="background:#e53935; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold;">SIMPAN</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card collapsed" id="sectionExpenseReception">
-            <div class="section-header" onclick="toggleSection('sectionExpenseReception')">
-                <h3 style="margin: 0; font-size: 14px;">🏢 Pengeluaran Resepsionis</h3>
-                <span class="arrow">▼</span>
-            </div>
-            <div class="menu-content">
-                <form action="/add_expense" method="POST" style="display:grid; gap:8px; margin-top:10px;">
-                    <input type="hidden" name="source" value="reception">
-                    <input type="text" name="keterangan" placeholder="Keterangan (misal: Setoran/Kebutuhan PT)..." required>
-                    <input type="text" name="jumlah" placeholder="Nominal" required oninput="formatRupiah(this)">
-                    <button type="submit" style="background:#1565c0; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold;">SIMPAN</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card collapsed" id="sectionStok">
-            <div class="section-header" onclick="toggleSection('sectionStok')">
-                <h3 style="margin: 0; font-size: 14px;">📦 Input Stok Barang</h3>
-                <span class="arrow">▼</span>
-            </div>
-            <div class="menu-content">
-                <form action="/add_stok" method="POST" style="display:grid; gap:8px; margin-top:10px;">
-                    <input type="text" name="keterangan" placeholder="Keterangan..." required>
-                    <input type="text" name="harga" placeholder="Nominal per item" required oninput="formatRupiah(this)">
-                    <input type="number" name="qty" placeholder="Jumlah (Qty)" required>
-                    <button type="submit" style="background:#2e7d32; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold;">SIMPAN STOK</button>
-                </form>
-            </div>
-        </div>
-        <div style="margin-top: 25px; padding-top: 15px; border-top: 2px dashed #ddd;">
-            <a href="/inventory" style="text-decoration:none;">
-                <button type="button" 
-                    style="background:#2e7d32; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold; width:100%;">
-                    📦 MANAJEMEN INVENTORY
-                </button>
-            </a>
-        </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ddd;">
-            <a href="/reports" style="text-decoration:none;">
-                <button type="button" 
-                    style="background: linear-gradient(135deg, #d4af37, #b8942a); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 800; width:100%; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
-                    📊 MANAGEMENT HUB (LAPORAN)
-                </button>
-            </a>
-        </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ddd;">
-            <a href="/absensi" style="text-decoration:none;">
-                <button type="button" 
-                    style="background:#6a1b9a; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold; width:100%;">
-                    🐝 ABSENSI KARYAWAN
-                </button>
-            </a>
-        </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ddd;">
-            <a href="/ptbos" style="text-decoration:none;">
-                <button type="button" 
-                    style="background:#1565c0; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold; width:100%;">
-                    PT. BIKIN ORANG SUKSES
-                </button>
-            </a>
-        </div>
-    </div>
-</div>
-
-<div class="container">
-    <div class="sticky-section">
-        <h2 style="text-align: center; color: #333; margin: 5px 0;">CAFE BOS KASIR</h2>
-        
-        <div class="kasir-info">
-            <span style="font-size: 13px; font-weight: bold; margin-left: 45px;">👤 KASIR:</span>
-            <input type="text" id="namaKasir" placeholder="Nama Anda..." oninput="saveKasirName()">
-        </div>
-
-        <div style="background: #f0f2f5; padding: 10px 0; display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0;">🛒 Pesanan Masuk</h3>
-            <button type="button" onclick="openArchiveModal()" style="background: #2e7d32; color: white; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; font-weight: bold; border: none; cursor: pointer;">📁 ARSIP EXCEL</button>
-        </div>
-    </div>
-
-    <div class="scroll-section">
-        {% if section == 'absensi_all' %}
-        <!-- LINK KE HALAMAN ABSEN -->
-        <div class="card" style="margin-bottom: 20px; border: 2px solid #d4af37; background: #fffdf0; text-align: center; padding: 20px;">
-            <h3 style="margin: 0 0 10px 0; color: #827717;">📱 Layar Absensi Karyawan</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Klik tombol di bawah untuk membuka layar yang akan digunakan karyawan untuk absen.</p>
-            <a href="/absensi" target="_blank">
-                <button style="background: #d4af37; color: black; border: none; padding: 12px 25px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(212,175,55,0.3);">
-                    BUKA HALAMAN ABSEN SEKARANG
-                </button>
-            </a>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <!-- INPUT KARYAWAN -->
-            <div class="card">
-                <div style="padding: 15px; background: #6a1b9a; color: white; border-radius: 12px 12px 0 0;">
-                    <h3 style="margin:0; font-size:14px;">👥 Tambah Karyawan</h3>
-                </div>
-                <div style="padding: 15px;">
-                    <form action="/add_employee" method="POST" style="display: grid; gap: 10px;">
-                        <input type="text" name="nama" placeholder="Nama Lengkap..." required style="padding:8px; border:1px solid #ddd; border-radius:6px;">
-                        <input type="number" name="pin" placeholder="PIN (4-6 Angka)..." required style="padding:8px; border:1px solid #ddd; border-radius:6px;">
-                        <button type="submit" style="background:#6a1b9a; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">SIMPAN</button>
+                        <label style="font-size: 11px; color: var(--text-secondary);">Ukuran Struk</label>
+                        <select name="thermal_printer_width" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px; margin-bottom: 10px;">
+                            <option value="58" {% if selected_width == '58' %}selected{% endif %}>58 mm</option>
+                            <option value="80" {% if selected_width == '80' %}selected{% endif %}>80 mm</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Simpan Printer</button>
                     </form>
                 </div>
-                <div style="padding: 0 15px 15px 15px;">
-                    <h4 style="font-size: 12px; color: #666; margin-bottom: 8px;">Daftar PIN:</h4>
-                    <div style="max-height: 200px; overflow-y: auto;">
-                        {% for e in employees %}
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 12px;">
-                            <span><b>{{ e.nama }}</b> ({{ e.pin }})</span>
-                            <form action="/del_employee/{{ e.id }}" method="POST" onsubmit="return confirm('Hapus?')">
-                                <button type="submit" style="background:none; border:none; color:#d32f2f; cursor:pointer;">×</button>
-                            </form>
-                        </div>
-                        {% endfor %}
-                    </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="font-weight: 800;">Daftar Pesanan</h1>
+                <p style="color: var(--text-secondary);">Monitor dan kelola pesanan pelanggan secara real-time.</p>
+            </div>
+            <button class="btn btn-primary glow-accent" onclick="document.getElementById('archiveModal').style.display='block'">
+                <i class="fas fa-archive"></i> Arsip Harian
+            </button>
+        </header>
+
+        <div id="tabDashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p style="color: var(--text-secondary); font-size: 13px;">BELUM BAYAR</p>
+                    <h2 style="font-size: 32px; font-weight: 800; color: #f59e0b;">{{ orders | selectattr('status', 'equalto', 'belum_bayar') | list | length }}</h2>
+                </div>
+                <div class="stat-card">
+                    <p style="color: var(--text-secondary); font-size: 13px;">DIPROSES (PENDING)</p>
+                    <h2 style="font-size: 32px; font-weight: 800; color: #3b82f6;">{{ orders | selectattr('status', 'equalto', 'pending') | list | length }}</h2>
+                </div>
+                <div class="stat-card">
+                    <p style="color: var(--text-secondary); font-size: 13px;">TOTAL SELESAI</p>
+                    <h2 style="font-size: 32px; font-weight: 800; color: #10b981;">{{ orders | selectattr('status', 'equalto', 'selesai') | list | length }}</h2>
                 </div>
             </div>
 
-            <!-- REKAP HARI INI -->
-            <div class="card">
-                <div style="padding: 15px; background: #00838f; color: white; border-radius: 12px 12px 0 0;">
-                    <h3 style="margin:0; font-size:14px;">📅 Rekap Hari Ini</h3>
-                </div>
-                <div style="max-height: 400px; overflow-y: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                        <thead style="background: #f8f9fa; position: sticky; top: 0;">
-                            <tr>
-                                <th style="padding: 8px; text-align: left;">Nama</th>
-                                <th style="padding: 8px; text-align: left;">Masuk</th>
-                                <th style="padding: 8px; text-align: left;">Pulang</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in attendance_today %}
-                            <tr>
-                                <td style="padding: 8px; border-bottom: 1px solid #f5f5f5;">{{ r.nama }}</td>
-                                <td style="padding: 8px; border-bottom: 1px solid #f5f5f5; color: #2e7d32; font-weight: bold;">{{ r.jam_masuk }}</td>
-                                <td style="padding: 8px; border-bottom: 1px solid #f5f5f5; color: #d32f2f; font-weight: bold;">{{ r.jam_pulang or '-' }}</td>
-                            </tr>
+            <div class="order-list">
+                {% for o in orders %}
+                <div class="order-item glass" style="border-left: 5px solid {{ '#f59e0b' if o.status == 'belum_bayar' else '#3b82f6' if o.status == 'pending' else '#10b981' }}">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
+                            <span style="background: var(--accent); color: #000; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 14px;">A-{{ o.meja }}</span>
+                            <span style="font-weight: 700; color: var(--text-primary);">{{ o.pelanggan }}</span>
+                            <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">{{ o.status.replace('_', ' ') }}</span>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                            {% for item in o.menu.split('|') %}
+                            <p style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
+                                <i class="fas fa-caret-right" style="color: var(--accent); font-size: 10px;"></i> {{ item.strip() }}
+                            </p>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">{{ o.waktu }}</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div style="text-align: right;">
+                            <p style="font-size: 12px; color: var(--text-secondary);">TOTAL TAGIHAN</p>
+                            <p style="font-weight: 800; font-size: 20px; color: var(--accent);">Rp {{ "{:,.0f}".format(o.total).replace(",", ".") }}</p>
+                        </div>
+                        {% if o.status == 'belum_bayar' %}
+                        <button class="btn btn-primary" style="background: #f59e0b;" onclick="openPayment('{{ o.id }}', '{{ o.total }}', '{{ o.meja }}')">BAYAR</button>
+                        {% elif o.status == 'pending' %}
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <button class="btn btn-secondary" style="background: #3b82f6; color: white;" onclick="panggilPesanan('{{ o.meja }}', '{{ o.pelanggan }}')">
+                                <i class="fas fa-volume-up"></i> PANGGIL
+                            </button>
+                            <button class="btn btn-secondary" style="background: #4b5563; color: white;" onclick="window.location.href='/print_barista/{{ o.id }}'">
+                                <i class="fas fa-print"></i> STRUK BARISTA
+                            </button>
+                            <form action="/finish/{{ o.id }}" method="POST">
+                                <button type="submit" class="btn btn-primary" style="background: #10b981;">DIAMBIL</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- REKAP KESELURUHAN (100 TERAKHIR) -->
-        <div class="card" style="margin-top: 20px;">
-            <div style="padding: 15px; background: #333; color: white; border-radius: 12px 12px 0 0;">
-                <h3 style="margin:0; font-size:14px;">📜 Riwayat 100 Absensi Terakhir</h3>
+        <div id="tabMenu" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="font-weight: 800;">Daftar Produk</h2>
+                <button class="btn btn-primary" onclick="document.getElementById('addMenuModal').style.display='block'">+ Tambah Menu</button>
             </div>
-            <div style="max-height: 300px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                    <thead style="background: #f8f9fa; position: sticky; top: 0;">
-                        <tr>
-                            <th style="padding: 8px; text-align: left;">Nama</th>
-                            <th style="padding: 8px; text-align: left;">Tanggal</th>
-                            <th style="padding: 8px; text-align: left;">Masuk</th>
-                            <th style="padding: 8px; text-align: left;">Pulang</th>
+            <div class="glass" style="padding: 20px; border-radius: 20px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 12px; color: var(--text-secondary);">PRODUK</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">HARGA</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">DISKON (%)</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">KATEGORI</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">AKSI</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in rekap_all %}
-                        <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #f5f5f5;">{{ r.nama }}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #f5f5f5;">{{ r.tanggal }}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #f5f5f5;">{{ r.jam_masuk }}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #f5f5f5;">{{ r.jam_pulang or '-' }}</td>
+                        {% for m in menus %}
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px; font-weight: 600;">{{ m.nama }}</td>
+                            <td style="padding: 12px;">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</td>
+                            <td style="padding: 12px; color: #ef4444; font-weight: 700;">{{ m.diskon }}%</td>
+                            <td style="padding: 12px;"><span class="glass" style="padding: 3px 10px; border-radius: 5px; font-size: 11px;">{{ m.kategori }}</span></td>
+                            <td style="padding: 12px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <button type="button" class="btn btn-secondary btn-edit" style="padding: 5px 10px; font-size: 12px;" data-id="{{ m.id }}" data-nama="{{ m.nama | escape }}" data-harga="{{ m.harga }}" data-kategori="{{ m.kategori | escape }}" data-has-opt="{{ m.has_opt }}" data-diskon="{{ m.diskon }}" data-has-note="{{ m.has_note }}" data-has-variant="{{ m.has_variant }}" data-variants="{{ (m.variants_json if m.variants_json else '[]') | safe }}">Edit</button>
+                                    <form action="/del_menu/{{ m.id }}" method="POST" onsubmit="return confirm('Hapus menu ini?')">
+                                        <button type="submit" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px; color: #ef4444;">Hapus</button>
+                                    </form>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -313,481 +183,630 @@
             </div>
         </div>
 
-        {% else %}
-        {% for o in orders %}
-        <div class="card order-card {{ 'pending' if o.status=='pending' else 'done' }}">
-            <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span class="meja-badge" onclick="editMeja('{{ o.id }}', '{{ o.meja }}')" style="cursor: pointer;" title="Klik untuk pindah meja">MEJA {{ o.meja }} ✏️</span>
-                    <form action="/delete_order/{{ o.id }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus/Batalkan pesanan Meja {{ o.meja }}?')">
-                        <button type="submit" style="background: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer;">✖ BATAL</button>
-                    </form>
-                </div>
-                <span class="status-text {{ 'pending-text' if o.status=='pending' else 'done-text' }}">
-                    {% if o.status == 'pending' %}
-                        🔴 Menunggu
-                    {% else %}
-                        🟢 LUNAS ({{ (o.metode|upper) if o.metode else 'CASH' }})
-                    {% endif %}
-                </span>
+        <!-- TAB KELOLA RESEP -->
+        <div id="tabRecipe" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="font-weight: 800; font-size: 24px;">Kelola Resep Produk</h2>
+                <button class="btn btn-primary" onclick="document.getElementById('addRecipeModal').style.display='block'">+ Tambah Bahan Resep</button>
             </div>
             
-            <div style="font-size: 11px; color: #888; margin-bottom: 5px;">📅 {{ o.waktu }}</div>
-            
-            <div class="menu-box">
-            <div class="item-list">
-                    {% set items = o.menu.split('|') %}
-                    {% set ns = namespace(real_idx=0) %}
-                    {% for item in items %}
-                        {% if item.strip() != "" and "TOTAL_QTY:" not in item %}
-                        {% set parts = item.split('\n') %}
-                        {% set nama_item = parts[0] %}
-                        {% set detail = parts[1].split('  ') if parts|length > 1 else [] %}
-                        {% set qty = detail[0]|int if detail|length > 0 else 1 %}
-                        {% set harga = detail[1]|int if detail|length > 1 else 0 %}
-                        {% set subtotal = detail[2]|int if detail|length > 2 else 0 %}
-                        <div class="item-row">
-                            <div class="item-info-col">
-                                <span class="item-text">{{ nama_item }}</span>
-                                <span class="item-sub-detail">{{ qty }}x @ Rp {{ "{:,.0f}".format(harga).replace(",", ".") }} = <b>Rp {{ "{:,.0f}".format(subtotal).replace(",", ".") }}</b></span>
-                            </div>
-                            {% if o.status == 'pending' %}
-                            <div class="qty-editor">
-                                <form action="/update_item_qty/{{ o.id }}/{{ ns.real_idx }}" method="POST" class="qty-form">
-                                    <input type="hidden" name="new_qty" value="{{ qty - 1 }}">
-                                    <button type="submit" class="qty-btn qty-minus" data-qty="{{ qty }}" onclick="return handleQtyMinus(this)" title="Kurangi qty">−</button>
-                                </form>
-                                <span class="qty-display">{{ qty }}</span>
-                                <form action="/update_item_qty/{{ o.id }}/{{ ns.real_idx }}" method="POST" class="qty-form">
-                                    <input type="hidden" name="new_qty" value="{{ qty + 1 }}">
-                                    <button type="submit" class="qty-btn qty-plus" title="Tambah qty">+</button>
-                                </form>
-                            </div>
-                            {% else %}
-                            <span class="qty-badge-done">x{{ qty }}</span>
-                            {% endif %}
-                        </div>
-                        {% set ns.real_idx = ns.real_idx + 1 %}
+            <div class="glass" style="padding: 20px; border-radius: 20px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 12px; color: var(--text-secondary);">PRODUK</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">BAHAN BAKU</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">JUMLAH PEMAKAIAN</th>
+                            <th style="padding: 12px; color: var(--text-secondary);">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m_id, data in recipes.items() %}
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px; font-weight: 800; vertical-align: top; width: 30%;">
+                                {{ data.menu_nama }}
+                            </td>
+                            <td colspan="3" style="padding: 0;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    {% for ing in data.ingredients %}
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <td style="padding: 12px; color: var(--text-secondary);">{{ ing.material_nama }}</td>
+                                        <td style="padding: 12px; font-weight: 600;">{{ ing.qty_used }} {{ ing.satuan }}</td>
+                                        <td style="padding: 12px; text-align: right;">
+                                            <form action="/del_recipe/{{ ing.id }}" method="POST" onsubmit="return confirm('Hapus bahan ini?')">
+                                                <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not recipes %}
+                        <tr>
+                            <td colspan="4" style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                                <i class="fas fa-info-circle"></i> Belum ada resep yang terdaftar.
+                            </td>
+                        </tr>
                         {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="order-footer">
-                <b class="total-price">Rp {{ "{:,.0f}".format(o.total).replace(",", ".") }}</b>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn-pay" style="background:#ffcc00; color:#333;" onclick="window.location.href='/print_barista/{{ o.id }}'">🧾 BARISTA</button>
-                    {% if o.status == 'pending' %}
-                        <button class="btn-pay" onclick="openPayment('{{ o.id }}', '{{ o.total }}', '{{ o.meja }}')">💰 BAYAR</button>
-                    {% else %}
-                        <button class="btn-pay" 
-                                style="background:#eee; color:#666;" 
-                                onclick="window.location.href='/reprint_thermal/{{ o.id }}?kasir=' + (document.getElementById('namaKasir').value || 'Admin')">
-                            🖨️ CETAK
-                        </button>
-                    {% endif %}
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
-        {% endfor %}
-        {% endif %}
+    </main>
+</div>
+
+<!-- Simple Payment Modal -->
+<div id="payModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; z-index: 3000; padding: 40px; border-radius: 30px; box-shadow: var(--shadow-lg);">
+    <h2 style="font-weight: 800; margin-bottom: 20px;">Pembayaran</h2>
+    <div style="margin-bottom: 30px;">
+        <p style="color: var(--text-secondary); font-size: 14px;">TOTAL TAGIHAN</p>
+        <h1 id="modalTotalTxt" style="font-size: 40px; font-weight: 800; color: var(--accent);">Rp 0</h1>
+    </div>
+    
+    <div class="input-group">
+        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">METODE PEMBAYARAN</label>
+        <select id="payMethod" style="height: 55px;" onchange="updatePaymentMethod()">
+            <option value="cash">TUNAI / CASH</option>
+            <option value="qris">QRIS / TRANSFER</option>
+        </select>
+    </div>
+
+    <div class="input-group" id="bayarGroup">
+        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">NOMINAL BAYAR</label>
+        <input type="text" id="inputBayar" placeholder="0" style="height: 55px; font-size: 20px; font-weight: 700;" oninput="formatBayarInput(); updateChange()">
+    </div>
+
+    <div id="paymentChangeInfo" style="display: none; font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
+        <strong id="paymentChangeText">KEMBALIAN: Rp 0</strong>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('payModal').style.display='none'">Batal</button>
+        <button class="btn btn-primary" onclick="prosesBayar()">Konfirmasi</button>
     </div>
 </div>
 
-<div id="payModal" class="modal">
-    <div class="modal-content" style="padding: 15px; max-width: 400px;">
-        <h3 style="margin: 0 0 10px 0; border-bottom: 2px solid #ffcc00; padding-bottom: 5px; font-size: 16px;">Konfirmasi Pembayaran</h3>
+<!-- Archive Modal -->
+<div id="archiveModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; z-index: 3000; padding: 40px; border-radius: 30px;">
+    <h3 style="font-weight: 800; margin-bottom: 15px;">Arsip Harian</h3>
+    <p style="color: var(--text-secondary); margin-bottom: 30px;">Simpan semua transaksi hari ini ke Excel dan bersihkan dashboard?</p>
+    <form action="/archive" method="POST">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('archiveModal').style.display='none'">Batal</button>
+            <button type="submit" class="btn btn-primary" style="background: #10b981;">Ya, Arsipkan</button>
+        </div>
+    </form>
+</div>
+
+<!-- Modal Tambah Resep -->
+<div id="addRecipeModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; z-index: 3000; padding: 40px; border-radius: 30px;">
+    <h3 style="font-weight: 800; margin-bottom: 20px;">Atur Resep Menu</h3>
+    <form action="/add_recipe" method="POST" id="recipeForm">
+        <div class="input-group">
+            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block;">PILIH MENU</label>
+            <select name="menu_id" required style="width: 100%; background: var(--bg-main); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary);">
+                {% for m in menus %}
+                <option value="{{ m.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{ m.nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div style="font-size: 13px; font-weight: bold;">Meja: <span id="modalMeja" style="color: #d32f2f;"></span></div>
-            <div style="font-size: 12px; color: #666;">Tagihan: <span id="modalTotalAsli" style="font-weight: bold;"></span></div>
+        <div style="margin-top: 20px;">
+            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; display: block;">DAFTAR BAHAN BAKU</label>
+            <div id="recipeIngredientsList">
+                <!-- Rows will be added here -->
+            </div>
+            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 12px;" onclick="addRecipeIngredientRow()">
+                <i class="fas fa-plus"></i> Tambah Bahan
+            </button>
         </div>
 
-        <div style="background: #fffde7; padding: 8px; border-radius: 8px; border: 1px dashed #fbc02d; margin-bottom: 10px;">
-            <label style="font-size: 10px; font-weight: bold; color: #827717; display: block; margin-bottom: 3px;">TOTAL DIBAYARKAN (PEMBULATAN):</label>
-            <input type="number" id="inputPembulatan" style="border: 1px solid #fbc02d; padding: 8px; font-size: 14px; width: 100%; box-sizing: border-box;" oninput="updateTotalSetelahBulat()">
-            <div id="infoDiskon" style="font-size: 10px; color: #d32f2f; margin-top: 3px; font-weight: bold; height: 12px;"></div>
-        </div>
+        <input type="hidden" name="recipe_json" id="recipeJsonInput">
 
-        <div style="text-align: center; margin-bottom: 10px;">
-            <span class="total-highlight" id="modalTotalTxt" style="font-size: 20px; display: block;"></span>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addRecipeModal').style.display='none'">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Resep</button>
         </div>
-
-        <div class="pay-method" style="margin-bottom: 10px; gap: 5px;">
-            <div id="btnCash" class="method-btn active" onclick="setMethod('cash')" style="padding: 10px; font-size: 12px;">💵 CASH</div>
-            <div id="btnQRIS" class="method-btn" onclick="setMethod('qris')" style="padding: 10px; font-size: 12px;">💳 QRIS</div>
-        </div>
-
-        <div id="cashArea" class="input-cash" style="margin-bottom: 10px;">
-            <label style="font-size: 10px; font-weight: bold; display: block; margin-bottom: 3px;">UANG TUNAI PELANGGAN:</label>
-            <input type="number" id="inputBayar" placeholder="Nominal bayar..." oninput="hitungKembalian()" style="padding: 10px; font-size: 16px; width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px;">
-            <div id="changeBox" class="change-box" style="margin-top: 5px; padding: 5px; background: #e8f5e9; border: 1px solid #2e7d32; font-size: 13px;">Kembalian: <span id="txtKembalian" style="font-weight: bold; color: #2e7d32;">Rp 0</span></div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <button onclick="closeModal()" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; font-size: 13px;">Batal</button>
-            <button id="btnProses" onclick="prosesBayar()" style="padding: 10px; border-radius: 8px; background: #333; color: #ffcc00; font-weight: bold; border: none; cursor: pointer; font-size: 13px;">PROSES BAYAR</button>
-        </div>
-    </div>
+    </form>
 </div>
 
-<div id="editMenuModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin-top: 0; color: #333; border-bottom: 2px solid #ffcc00; padding-bottom: 10px;">Edit Menu 🐝</h3>
-        <form id="formEditMenu" action="" method="POST" enctype="multipart/form-data" style="display: grid; gap: 12px; margin-top: 15px;">
-            <input type="hidden" name="gambar" id="editMenuGambarOld">
-            <div>
-                <label style="font-size: 11px; font-weight: bold; color: #666; display: block; margin-bottom: 5px;">NAMA MENU:</label>
-                <input type="text" name="nama" id="editMenuNama" required style="border: 1px solid #ffcc00; background: #fffdf0;">
-            </div>
-            
-            <div>
-                <label style="font-size: 11px; font-weight: bold; color: #666; display: block; margin-bottom: 5px;">HARGA (RP):</label>
-                <input type="text" name="harga" id="editMenuHarga" required oninput="formatRupiah(this)" style="border: 1px solid #ffcc00; background: #fffdf0;">
-            </div>
-            
-            <div>
-                <label style="font-size: 11px; font-weight: bold; color: #666; display: block; margin-bottom: 5px;">KATEGORI:</label>
-                <select name="kategori" id="editMenuKategori" style="border: 1px solid #ffcc00; background: #fffdf0;">
-                    <option value="COFFEE">COFFEE</option>
-                    <option value="MILK FLAVOR LATTE">MILK FLAVOR LATTE</option>
-                    <option value="OTHERS">OTHERS</option>
-                    <option value="FOOD & SNACK">FOOD & SNACK</option>
-                </select>
-            </div>
-            
-            <div>
-                <label style="font-size: 11px; font-weight: bold; color: #666; display: block; margin-bottom: 5px;">GANTI GAMBAR (Opsional):</label>
-                <input type="file" name="file_gambar" accept="image/*" style="border: 1px solid #ffcc00; background: #fffdf0; padding: 5px; font-size: 12px;">
-                <div id="currentImgLabel" style="font-size: 10px; color: #888; margin-top: 5px;"></div>
-            </div>
-            
-            <div style="margin: 10px 0; display: flex; gap: 15px;">
-                <label style="font-size: 13px; font-weight: bold; color: #d32f2f; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" name="use_ppn" id="editMenuPPN" style="width: auto;"> PPN 10% 🧾
-                </label>
-                <label style="font-size: 13px; font-weight: bold; color: #d4af37; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" name="show_on_tv" id="editMenuShowTV" style="width: auto;"> TAMPILKAN DI TV 📺
-                </label>
-            </div>
-            
-            <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button type="button" onclick="closeEditModal()" style="padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #eee; cursor: pointer;">Batal</button>
-                <button type="submit" style="padding: 12px; border-radius: 8px; background: #333; color: #ffcc00; font-weight: bold; border: none; cursor: pointer;">SIMPAN</button>
-            </div>
-        </form>
-    </div>
+<!-- Modal Tambah Menu -->
+<div id="addMenuModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; max-height: 90vh; overflow-y: auto; z-index: 3000; padding: 40px; border-radius: 30px;">
+    <h3 style="font-weight: 800; margin-bottom: 20px;">Tambah Menu Baru</h3>
+    <form id="addMenuForm" action="/add_menu" method="POST" enctype="multipart/form-data">
+        <div class="input-group">
+            <input type="text" name="nama" placeholder="Nama Menu" required>
+        </div>
+        <div class="input-group">
+            <input type="number" name="harga" placeholder="Harga (Contoh: 15000)" required>
+        </div>
+        <div class="input-group">
+            <input type="number" name="diskon" placeholder="Diskon % (Contoh: 10)" value="0">
+        </div>
+        <div class="input-group">
+            <input type="text" name="kategori" placeholder="Kategori (Contoh: Minuman)" required>
+        </div>
+        <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_opt" value="1"> Minuman
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_note" value="1"> Catatan
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_variant" value="1" onchange="toggleVarContainer(this, 'add')"> Varian
+            </label>
+        </div>
+        <div id="addVarContainer" style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
+            <div id="addVarList"></div>
+            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="addVarRow('add')">
+                <i class="fas fa-plus"></i> Tambah Kategori Varian
+            </button>
+            <input type="hidden" name="variants_json" id="addVariantsJson" value="[]">
+        </div>
+        <div class="input-group">
+            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GAMBAR PRODUK</label>
+            <input type="file" name="gambar" accept="image/*">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addMenuModal').style.display='none'">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+    </form>
 </div>
 
-<!-- MODAL UPLOAD BUKTI CASH -->
-<div id="archiveModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
-        <h3 style="margin-top: 0; color: #333; border-bottom: 2px solid #2e7d32; padding-bottom: 10px;">Konfirmasi Arsip 📁</h3>
-        <p style="font-size: 13px; color: #666;">Apakah Anda yakin ingin melakukan pengarsipan data hari ini? Data pesanan yang selesai, pengeluaran, dan pemasukan PT BOS akan dibersihkan dari database untuk hari baru.</p>
+<!-- Modal Edit Menu -->
+<div id="editMenuModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; max-height: 90vh; overflow-y: auto; z-index: 3000; padding: 40px; border-radius: 30px;">
+    <h3 style="font-weight: 800; margin-bottom: 20px;">Edit Menu</h3>
+    <form id="editMenuForm" action="/update_menu" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="id" id="editMenuId">
+        <div class="input-group">
+            <input type="text" name="nama" id="editMenuNama" required>
+        </div>
+        <div class="input-group">
+            <input type="number" name="harga" id="editMenuHarga" required>
+        </div>
+        <div class="input-group">
+            <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; display: block;">DISKON (%)</label>
+            <input type="number" name="diskon" id="editMenuDiskon">
+        </div>
+        <div class="input-group">
+            <input type="text" name="kategori" id="editMenuKategori" required>
+        </div>
+        <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_opt" id="editMenuOpt" value="1"> Minuman
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_note" id="editMenuNote" value="1"> Catatan
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                <input type="checkbox" name="has_variant" id="editMenuHasVar" value="1" onchange="toggleVarContainer(this, 'edit')"> Varian
+            </label>
+        </div>
         
-        <form action="/archive" method="POST" style="display: grid; gap: 15px; margin-top: 15px;">
-            <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button type="button" onclick="closeArchiveModal()" style="padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #eee; cursor: pointer;">Batal</button>
-                <button type="submit" style="padding: 12px; border-radius: 8px; background: #2e7d32; color: white; font-weight: bold; border: none; cursor: pointer;">ARSIP SEKARANG</button>
-            </div>
-        </form>
-    </div>
+        <div id="editVarContainer" style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
+            <div id="editVarList"></div>
+            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="addVarRow('edit')">
+                <i class="fas fa-plus"></i> Tambah Kategori Varian
+            </button>
+            <input type="hidden" name="variants_json" id="editVariantsJson" value="[]">
+        </div>
+        <div class="input-group">
+            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GANTI GAMBAR (OPSIONAL)</label>
+            <input type="file" name="gambar" accept="image/*">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('editMenuModal').style.display='none'">Batal</button>
+            <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+    </form>
 </div>
 
 <script>
     let currentOrderId = null;
     let currentTotal = 0;
-    let totalAkhirFix = 0;
-    let currentMethod = 'cash';
+    const html = document.documentElement;
 
-    function toggleSidebar() {
-        const sidebar = document.getElementById("mySidebar");
-        const overlay = document.getElementById("sidebarOverlay");
-        // Responsive sidebar width: 300px on desktop, 85vw on small screens
-        const sidebarWidth = window.innerWidth <= 600 ? '90vw' : '450px';
-        if (sidebar.style.width && sidebar.style.width !== '0px' && sidebar.style.width !== '0') {
-            sidebar.style.width = "0";
-            overlay.style.display = "none";
+    function switchAdminTab(tab) {
+        const dashboard = document.getElementById('tabDashboard');
+        const menu = document.getElementById('tabMenu');
+        const recipe = document.getElementById('tabRecipe');
+        const navDash = document.getElementById('navDashboard');
+        const navMenu = document.getElementById('navMenu');
+        const navRecipe = document.getElementById('navRecipe');
+
+        dashboard.style.display = 'none';
+        menu.style.display = 'none';
+        recipe.style.display = 'none';
+        navDash.classList.remove('active');
+        navMenu.classList.remove('active');
+        navRecipe.classList.remove('active');
+
+        if (tab === 'dashboard') {
+            dashboard.style.display = 'block';
+            navDash.classList.add('active');
+        } else if (tab === 'menu') {
+            menu.style.display = 'block';
+            navMenu.classList.add('active');
         } else {
-            sidebar.style.width = sidebarWidth;
-            overlay.style.display = "block";
+            recipe.style.display = 'block';
+            navRecipe.classList.add('active');
         }
     }
 
-    function saveKasirName() {
-        localStorage.setItem('activeKasir', document.getElementById('namaKasir').value);
-    }
-
-    window.onload = function() {
-        const savedKasir = localStorage.getItem('activeKasir');
-        if (savedKasir) document.getElementById('namaKasir').value = savedKasir;
-        if (localStorage.getItem('menuCollapsed') === 'false') {
-            const section = document.getElementById('sectionMenu');
-            if(section) section.classList.remove('collapsed');
-        }
-    };
-
-    function editMeja(id, mejaLama) {
-        let mejaBaru = prompt("Masukkan Nomor Meja Baru:", mejaLama);
-        if (mejaBaru !== null && mejaBaru !== "" && mejaBaru !== mejaLama) {
-            window.location.href = `/edit_meja/${id}?meja_baru=${mejaBaru}`;
+    function toggleVarContainer(cb, mode) {
+        document.getElementById(mode + 'VarContainer').style.display = cb.checked ? 'block' : 'none';
+        if (cb.checked && document.getElementById(mode + 'VarList').children.length === 0) {
+            addVarRow(mode);
         }
     }
+
+    function addVarRow(mode, title = '', options = '') {
+        const list = document.getElementById(mode + 'VarList');
+        const div = document.createElement('div');
+        div.className = 'variant-row';
+        div.style.marginBottom = '15px';
+        div.style.padding = '15px';
+        div.style.background = 'rgba(0,0,0,0.2)';
+        div.style.borderRadius = '10px';
+        
+        // Parse options - bisa dari format lama (string) atau format baru (array)
+        let optionsArray = [];
+        if (typeof options === 'string') {
+            // Format lama: "Single, Double"
+            optionsArray = options.split(',').map(o => ({ name: o.trim(), price: 0 }));
+        } else if (Array.isArray(options)) {
+            // Format baru: [{name: "Single", price: 0}]
+            optionsArray = options;
+        } else if (options.list) {
+            // Format mix
+            const items = typeof options.list === 'string' ? options.list.split(',') : options.list;
+            optionsArray = items.map(o => ({ name: o.trim(), price: 0 }));
+        }
+        
+        const isMultiple = options.is_multiple || false;
+        
+        div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <input type="text" placeholder="Judul (Contoh: Porsi)" value="${title}" class="v-title" style="margin: 0; flex-grow: 1; margin-right: 10px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary);">
+                <label style="font-size: 10px; display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-right: 10px;">
+                    <input type="checkbox" class="v-multiple" ${isMultiple ? 'checked' : ''}> Pilih Ganda?
+                </label>
+                <button type="button" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 16px;"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="v-options-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+            </div>
+            <button type="button" class="btn btn-secondary" style="width: 100%; padding: 8px 12px; font-size: 12px;" onclick="addOptionPrice(this)">
+                <i class="fas fa-plus"></i> Tambah Opsi
+            </button>
+        `;
+        
+        const optionsList = div.querySelector('.v-options-list');
+        optionsArray.forEach(opt => {
+            const optDiv = document.createElement('div');
+            optDiv.className = 'option-item';
+            optDiv.style.display = 'grid';
+            optDiv.style.gridTemplateColumns = '1fr 120px 30px';
+            optDiv.style.gap = '8px';
+            optDiv.style.alignItems = 'center';
+            optDiv.innerHTML = `
+                <input type="text" placeholder="Nama Opsi (Contoh: Single)" value="${opt.name}" class="opt-name" style="margin: 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 10px; color: var(--text-secondary);">+Rp</span>
+                    <input type="number" placeholder="0" value="${opt.price || 0}" class="opt-price" style="margin: 0; padding: 6px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px; flex-grow: 1;">
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash"></i></button>
+            `;
+            optionsList.appendChild(optDiv);
+        });
+        
+        list.appendChild(div);
+    }
+
+    function addOptionPrice(button) {
+        const optionsList = button.previousElementSibling;
+        const optDiv = document.createElement('div');
+        optDiv.className = 'option-item';
+        optDiv.style.display = 'grid';
+        optDiv.style.gridTemplateColumns = '1fr 120px 30px';
+        optDiv.style.gap = '8px';
+        optDiv.style.alignItems = 'center';
+        optDiv.innerHTML = `
+            <input type="text" placeholder="Nama Opsi (Contoh: Double)" class="opt-name" style="margin: 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 10px; color: var(--text-secondary);">+Rp</span>
+                <input type="number" placeholder="0" value="0" class="opt-price" style="margin: 0; padding: 6px 6px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px; flex-grow: 1;">
+            </div>
+            <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash"></i></button>
+        `;
+        optionsList.appendChild(optDiv);
+    }
+
+    function addRecipeIngredientRow() {
+        const list = document.getElementById('recipeIngredientsList');
+        const div = document.createElement('div');
+        div.className = 'ingredient-row';
+        div.style.display = 'grid';
+        div.style.gridTemplateColumns = '1fr 100px 40px';
+        div.style.gap = '10px';
+        div.style.marginBottom = '10px';
+        
+        let materialOptions = '';
+        {% for mat in materials %}
+        materialOptions += `<option value="{{ mat.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{ mat.nama }} ({{ mat.satuan }})</option>`;
+        {% endfor %}
+        
+        div.innerHTML = `
+            <select class="ing-id" required style="background: var(--bg-main); border: 1px solid var(--border); padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 13px;">
+                ${materialOptions}
+            </select>
+            <input type="number" step="0.001" class="ing-qty" placeholder="Qty" required style="padding: 8px; font-size: 13px;">
+            <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer;">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        list.appendChild(div);
+    }
+
+    document.getElementById('recipeForm').addEventListener('submit', function(e) {
+        const rows = document.querySelectorAll('.ingredient-row');
+        let ingredients = [];
+        rows.forEach(row => {
+            const matId = row.querySelector('.ing-id').value;
+            const qty = row.querySelector('.ing-qty').value;
+            if (matId && qty) ingredients.push({ matId, qty });
+        });
+        
+        if (ingredients.length === 0) {
+            alert("Tambahkan setidaknya satu bahan!");
+            e.preventDefault();
+            return;
+        }
+        
+        document.getElementById('recipeJsonInput').value = JSON.stringify(ingredients);
+    });
+
+    // Add first row automatically
+    addRecipeIngredientRow();
+
+    function collectVariants(mode) {
+        const rows = document.getElementById(mode + 'VarList').querySelectorAll('.variant-row');
+        let variants = [];
+        rows.forEach(row => {
+            const title = row.querySelector('.v-title').value.trim();
+            const is_multiple = row.querySelector('.v-multiple').checked;
+            
+            // Kumpulkan semua opsi dengan harga mereka
+            const optionItems = row.querySelectorAll('.option-item');
+            const options = [];
+            optionItems.forEach(item => {
+                const name = item.querySelector('.opt-name').value.trim();
+                const price = parseInt(item.querySelector('.opt-price').value || 0);
+                if (name) {
+                    options.push({ name, price });
+                }
+            });
+            
+            if (title && options.length > 0) {
+                variants.push({ title, options, is_multiple });
+            }
+        });
+        document.getElementById(mode + 'VariantsJson').value = JSON.stringify(variants);
+    }
+
+    // Attach collector to forms
+    document.getElementById('addMenuForm').addEventListener('submit', function() {
+        if (document.getElementById('addVarContainer').style.display !== 'none') {
+            collectVariants('add');
+        }
+    });
+
+    document.getElementById('editMenuForm').addEventListener('submit', function() {
+        if (document.getElementById('editVarContainer').style.display !== 'none') {
+            collectVariants('edit');
+        }
+    });
+
+    function openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants) {
+        document.getElementById('editMenuId').value = id;
+        document.getElementById('editMenuNama').value = nama;
+        document.getElementById('editMenuHarga').value = harga;
+        document.getElementById('editMenuKategori').value = kategori;
+        document.getElementById('editMenuOpt').checked = (has_opt === '1' || has_opt === 1);
+        document.getElementById('editMenuNote').checked = (has_note === '1' || has_note === 1);
+        
+        const hasVar = (has_variant === '1' || has_variant === 1);
+        document.getElementById('editMenuHasVar').checked = hasVar;
+        document.getElementById('editVarContainer').style.display = hasVar ? 'block' : 'none';
+        
+        const list = document.getElementById('editVarList');
+        list.innerHTML = '';
+        if (variants && variants.length > 0) {
+            variants.forEach(v => {
+                // Kompatibel dengan format lama dan baru
+                let optionsData = v.options;
+                if (typeof v.options === 'string') {
+                    // Format lama: string
+                    optionsData = v.options;
+                } else if (Array.isArray(v.options)) {
+                    // Format baru: array of {name, price}
+                    optionsData = v.options;
+                }
+                addVarRow('edit', v.title, { list: optionsData, is_multiple: v.is_multiple });
+            });
+        }
+
+        document.getElementById('editMenuDiskon').value = diskon || 0;
+        document.getElementById('editMenuModal').style.display = 'block';
+    }
+
+    let voices = [];
+    function loadVoices() {
+        voices = window.speechSynthesis.getVoices();
+        const voiceSelect = document.getElementById('voiceSelect');
+        voiceSelect.innerHTML = '';
+        voices.forEach((voice, i) => {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            if (voice.lang.includes('id')) option.selected = true;
+            voiceSelect.appendChild(option);
+        });
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    // Helper function to unescape HTML entities
+    function unescapeHtml(text) {
+        const map = {
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&quot;': '"',
+            '&#039;': "'"
+        };
+        return text.replace(/&amp;|&lt;|&gt;|&quot;|&#039;/g, m => map[m]);
+    }
+
+    // Event listener untuk button Edit
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            try {
+                const id = this.getAttribute('data-id');
+                const nama = unescapeHtml(this.getAttribute('data-nama') || '');
+                const harga = this.getAttribute('data-harga');
+                const kategori = unescapeHtml(this.getAttribute('data-kategori') || '');
+                const has_opt = this.getAttribute('data-has-opt');
+                const diskon = this.getAttribute('data-diskon');
+                const has_note = this.getAttribute('data-has-note');
+                const has_variant = this.getAttribute('data-has-variant');
+                let variants = [];
+                
+                const variantsStr = this.getAttribute('data-variants') || '[]';
+                try {
+                    variants = JSON.parse(variantsStr);
+                } catch (parseError) {
+                    console.error('Error parsing variants:', parseError, 'String:', variantsStr);
+                    variants = [];
+                }
+                
+                openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants);
+            } catch (error) {
+                console.error('Error in edit button:', error);
+                alert('Ada error saat membuka edit menu. Silakan refresh halaman dan coba lagi.');
+            }
+        });
+    });
+
+    function panggilPesanan(nomor, nama) {
+        const teks = `Nomor antrian ${nomor}. Atas nama ${nama}. Silakan ambil pesanan Anda.`;
+        const speech = new SpeechSynthesisUtterance(teks);
+        const selectedVoiceIndex = document.getElementById('voiceSelect').value;
+        if (voices[selectedVoiceIndex]) {
+            speech.voice = voices[selectedVoiceIndex];
+        }
+        speech.lang = 'id-ID';
+        speech.rate = 0.9;
+        window.speechSynthesis.speak(speech);
+    }
+
+    function toggleTheme() {
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        document.getElementById('themeIcon').className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        document.getElementById('themeText').innerText = newTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
+        localStorage.setItem('theme', newTheme);
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    html.setAttribute('data-theme', savedTheme);
+    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    document.getElementById('themeText').innerText = savedTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
 
     function openPayment(id, total, meja) {
         currentOrderId = id;
-        let subtotalTotal = parseInt(total);
-        let totalDikenakanPPN = 0;
-
-        // Cari card order berdasarkan id untuk menghitung item per item
-        const orderCards = document.querySelectorAll('.order-card');
-        let targetCard = null;
-        
-        // Cari tombol bayar yang diklik untuk mendapatkan konteks card-nya
-        // Karena id pesanan unik, kita cari di dalam list pesanan
-        const btns = document.querySelectorAll('.btn-pay');
-        btns.forEach(btn => {
-            if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(id)) {
-                targetCard = btn.closest('.order-card');
-            }
-        });
-
-        if (targetCard) {
-            const items = targetCard.querySelectorAll('.item-row');
-            items.forEach(row => {
-                const itemText = row.querySelector('.item-text').innerText;
-                const detailText = row.querySelector('.item-sub-detail b').innerText; // Rp 30.000
-                const subItem = parseInt(detailText.replace(/[^0-9]/g, '')) || 0;
-                
-                if (!itemText.includes('{NON_PPN}')) {
-                    totalDikenakanPPN += subItem;
-                }
-            });
-        } else {
-            // Fallback jika card tidak ketemu (default kena PPN semua)
-            totalDikenakanPPN = subtotalTotal;
-        }
-
-        let ppn = Math.floor(totalDikenakanPPN * 0.10);
-        currentTotal = subtotalTotal + ppn;
-        totalAkhirFix = currentTotal;
-        
-        if(document.getElementById('modalMeja')) document.getElementById('modalMeja').innerText = meja;
-        if(document.getElementById('modalTotalAsli')) document.getElementById('modalTotalAsli').innerText = "Rp " + currentTotal.toLocaleString('id-ID');
-        if(document.getElementById('modalTotalTxt')) document.getElementById('modalTotalTxt').innerText = "TOTAL: Rp " + currentTotal.toLocaleString('id-ID');
-        
-        const inputBulat = document.getElementById('inputPembulatan');
-        if(inputBulat) inputBulat.value = currentTotal;
-        if(document.getElementById('infoDiskon')) document.getElementById('infoDiskon').innerText = ""; 
-        if(document.getElementById('inputBayar')) document.getElementById('inputBayar').value = "";
-        if(document.getElementById('changeBox')) document.getElementById('changeBox').style.display = 'none';
-        
+        currentTotal = parseInt(total);
+        document.getElementById('modalTotalTxt').innerText = "Rp " + currentTotal.toLocaleString('id-ID').replace(/,/g, '.');
+        document.getElementById('payMethod').value = 'cash';
+        document.getElementById('inputBayar').value = '';
+        updatePaymentMethod();
         document.getElementById('payModal').style.display = 'block';
-        setMethod('cash');
     }
 
-    function closeModal() { document.getElementById('payModal').style.display = 'none'; }
-
-    function setMethod(method) {
-        currentMethod = method;
-        const btnCash = document.getElementById('btnCash');
-        const btnQRIS = document.getElementById('btnQRIS');
-        const cashArea = document.getElementById('cashArea');
-        if(btnCash) btnCash.classList.toggle('active', method === 'cash');
-        if(btnQRIS) btnQRIS.classList.toggle('active', method === 'qris');
-        if(cashArea) cashArea.style.display = (method === 'cash') ? 'block' : 'none';
-        hitungKembalian();
-    }
-
-    function updateTotalSetelahBulat() {
-        const inputBulat = document.getElementById('inputPembulatan');
-        if(!inputBulat) return;
-        let bulat = parseInt(inputBulat.value) || 0;
-        totalAkhirFix = bulat;
-        let selisih = currentTotal - bulat;
-        let info = document.getElementById('infoDiskon');
-        if (info) info.innerText = (selisih > 0) ? "Diskon Pembulatan: Rp " + selisih.toLocaleString('id-ID') : "";
-        if(document.getElementById('modalTotalTxt')) document.getElementById('modalTotalTxt').innerText = "TOTAL: Rp " + totalAkhirFix.toLocaleString('id-ID');
-        hitungKembalian();
-    }
-
-    function hitungKembalian() {
-        const inputBayar = document.getElementById('inputBayar');
-        const box = document.getElementById('changeBox');
-        if(!inputBayar || !box) return;
-        const bayar = parseInt(inputBayar.value) || 0;
-        if (currentMethod === 'cash' && bayar >= totalAkhirFix && totalAkhirFix > 0) {
-            box.style.display = 'block';
-            document.getElementById('txtKembalian').innerText = "Rp " + (bayar - totalAkhirFix).toLocaleString('id-ID');
-        } else { box.style.display = 'none'; }
-    }
-
-    function toggleSection(sectionId) {
-        const card = document.getElementById(sectionId);
-        document.querySelectorAll('.sidebar .card').forEach(c => {
-            if(c.id !== sectionId) c.classList.add('collapsed');
-        });
-        card.classList.toggle('collapsed');
-        if (sectionId === 'sectionMenu') {
-            localStorage.setItem('menuCollapsed', card.classList.contains('collapsed'));
+    function updatePaymentMethod() {
+        const method = document.getElementById('payMethod').value;
+        const bayarGroup = document.getElementById('bayarGroup');
+        const changeInfo = document.getElementById('paymentChangeInfo');
+        if (method === 'cash') {
+            bayarGroup.style.display = 'block';
+            changeInfo.style.display = 'block';
+            updateChange();
+        } else {
+            bayarGroup.style.display = 'none';
+            changeInfo.style.display = 'none';
+            document.getElementById('inputBayar').value = '';
         }
+    }
+
+    function formatRupiah(value) {
+        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function getBayarValue() {
+        const raw = document.getElementById('inputBayar').value.replace(/\D/g, '');
+        return raw ? parseInt(raw, 10) : 0;
+    }
+
+    function formatBayarInput() {
+        const input = document.getElementById('inputBayar');
+        const raw = input.value.replace(/\D/g, '');
+        if (!raw) {
+            input.value = '';
+            return;
+        }
+        input.value = formatRupiah(raw);
+    }
+
+    function updateChange() {
+        const bayarValue = getBayarValue();
+        const change = bayarValue - currentTotal;
+        const formatted = "Rp " + Math.abs(change).toLocaleString('id-ID').replace(/,/g, '.');
+        const text = change >= 0 ? `KEMBALIAN: ${formatted}` : `KURANG: ${formatted}`;
+        document.getElementById('paymentChangeText').innerText = text;
     }
 
     function prosesBayar() {
-        const kasir = document.getElementById('namaKasir').value || 'Admin';
-        const inputBayar = document.getElementById('inputBayar');
-        const bayar = (currentMethod === 'cash' && inputBayar.value) ? inputBayar.value : totalAkhirFix;
-        const diskon = currentTotal - totalAkhirFix;
+        const method = document.getElementById('payMethod').value;
+        const bayar = method === 'cash' ? (getBayarValue() || currentTotal) : currentTotal;
         
-        // Submit via POST form
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = `/done/${currentOrderId}`;
+        form.action = `/pay/${currentOrderId}`;
         
-        const fields = {kasir, bayar, metode: currentMethod, total_akhir: totalAkhirFix, diskon};
+        const fields = { kasir: 'Admin', bayar, metode: method, total_akhir: currentTotal };
         for (const [key, value] of Object.entries(fields)) {
             const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = key;
-            input.value = value;
+            input.type = 'hidden'; input.name = key; input.value = value;
             form.appendChild(input);
         }
-        
         document.body.appendChild(form);
         form.submit();
     }
 
-    function formatRupiah(input) {
-        let value = input.value.replace(/[^,\d]/g, '').toString();
-        let split = value.split(',');
-        let sisa = split[0].length % 3;
-        let rupiah = split[0].substr(0, sisa);
-        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
-        if (ribuan) {
-            let separator = sisa ? '.' : '';
-            rupiah += separator + ribuan.join('.');
-        }
-        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
-        input.value = rupiah;
-    }
-
-    function filterMenus() {
-        const input = document.getElementById('menuSearchInput');
-        const filter = input.value.toLowerCase();
-        const items = document.querySelectorAll('.menu-list-item');
-        const groups = document.querySelectorAll('.menu-items-group');
-        const titles = document.querySelectorAll('.menu-cat-group');
-
-        items.forEach(item => {
-            const name = item.getAttribute('data-name');
-            if (name.includes(filter)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // Sembunyikan kategori jika tidak ada menu yang cocok
-        groups.forEach((group, index) => {
-            const visibleItems = Array.from(group.querySelectorAll('.menu-list-item')).filter(i => i.style.display !== 'none');
-            if (visibleItems.length === 0) {
-                titles[index].style.display = 'none';
-                group.style.display = 'none';
-            } else {
-                titles[index].style.display = 'block';
-                group.style.display = 'block';
-            }
-        });
-    }
-
-    function addToppingRow() {
-        const container = document.getElementById('toppingRows');
-        const div = document.createElement('div');
-        div.className = 'topping-row';
-        div.innerHTML = `
-            <input type="text" placeholder="Nama" class="top-name" style="padding: 5px; font-size: 12px;">
-            <input type="number" placeholder="Rp" class="top-price" style="padding: 5px; font-size: 12px;">
-            <span class="btn-remove-top" onclick="this.parentElement.remove()">×</span>
-        `;
-        container.appendChild(div);
-    }
-
-    function prepareToppingData() {
-        const rows = document.querySelectorAll('.topping-row');
-        let names = [];
-        let prices = [];
-        rows.forEach(row => {
-            const name = row.querySelector('.top-name').value.trim();
-            const price = row.querySelector('.top-price').value.trim();
-            if (name && price) {
-                names.push(name);
-                prices.push(price);
-            }
-        });
-        document.getElementById('hiddenTopping').value = names.join(',');
-        document.getElementById('hiddenHargaTopping').value = prices.join(',');
-    }
-
-    function handleEditMenu(el) {
-        const id = el.getAttribute('data-id');
-        const nama = el.getAttribute('data-nama');
-        const harga = el.getAttribute('data-harga');
-        const kategori = el.getAttribute('data-kategori');
-        const gambar = el.getAttribute('data-gambar');
-        const tv = parseInt(el.getAttribute('data-tv'));
-        openEditMenu(id, nama, harga, kategori, gambar, tv);
-    }
-
-    function handleQtyMinus(el) {
-        const qty = parseInt(el.getAttribute('data-qty'));
-        if (qty - 1 <= 0) {
-            return confirm('Hapus item ini dari pesanan?');
-        }
-        return true;
-    }
-
-    function openEditMenu(id, nama, harga, kategori, gambar, show_on_tv) {
-        document.getElementById('formEditMenu').action = '/update_menu/' + id;
-        document.getElementById('editMenuNama').value = nama;
-        document.getElementById('editMenuHarga').value = harga;
-        document.getElementById('editMenuKategori').value = kategori;
-        document.getElementById('editMenuGambarOld').value = gambar;
-        document.getElementById('editMenuShowTV').checked = (show_on_tv === 1);
-        
-        // Cek PPN (Gunakan data dari atribut yang akan kita tambahkan di bawah)
-        const usePPN = event.currentTarget.getAttribute('data-ppn') === '1';
-        document.getElementById('editMenuPPN').checked = usePPN;
-        
-        const imgLabel = document.getElementById('currentImgLabel');
-        imgLabel.textContent = gambar ? "Gambar saat ini: " + gambar : "Belum ada gambar.";
-        
-        // Format rupiah awal
-        formatRupiah(document.getElementById('editMenuHarga'));
-        
-        document.getElementById('editMenuModal').style.display = 'block';
-    }
-
-    function closeEditModal() {
-        document.getElementById('editMenuModal').style.display = 'none';
-    }
-
-    function openArchiveModal() {
-        document.getElementById('archiveModal').style.display = 'block';
-    }
-
-    function closeArchiveModal() {
-        document.getElementById('archiveModal').style.display = 'none';
-    }
-
-    // Tutup modal jika klik di luar area modal
-    window.onclick = function(event) {
-        const payModal = document.getElementById('payModal');
-        const editModal = document.getElementById('editMenuModal');
-        const archiveModal = document.getElementById('archiveModal');
-        if (event.target == payModal) closeModal();
-        if (event.target == editModal) closeEditModal();
-        if (event.target == archiveModal) closeArchiveModal();
-    }
+    // Check for tab parameter on load
+    window.onload = () => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab === 'menu') switchAdminTab('menu');
+        if (tab === 'recipe') switchAdminTab('recipe');
+    };
 </script>
 </body>
 </html>
