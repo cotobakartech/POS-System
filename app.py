@@ -209,7 +209,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
             password TEXT,
-            role TEXT
+            role TEXT,
+            fullname TEXT
         );
         CREATE TABLE IF NOT EXISTS menus (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,6 +270,24 @@ def init_db():
             FOREIGN KEY (menu_id) REFERENCES menus(id),
             FOREIGN KEY (material_id) REFERENCES raw_materials(id)
         );
+        CREATE TABLE IF NOT EXISTS membership (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT,
+            nomor_member TEXT UNIQUE,
+            poin INTEGER DEFAULT 0,
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS membership_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            membership_id INTEGER,
+            order_id INTEGER,
+            poin_earned INTEGER DEFAULT 0,
+            poin_redeemed INTEGER DEFAULT 0,
+            reward_type TEXT,
+            waktu TEXT,
+            FOREIGN KEY (membership_id) REFERENCES membership(id),
+            FOREIGN KEY (order_id) REFERENCES orders(id)
+        );
     ''')
     
     # Migrasi: Tambah kolom pelanggan jika belum ada
@@ -312,11 +331,50 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Migrasi: tambah kolom untuk membership dan student discount
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN is_dine_in INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN membership_id INTEGER")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN is_student_discount INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN points_earned INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN points_redeemed INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migrasi: tambah kolom fullname pada users jika belum ada
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN fullname TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    # Migrasi: tambah kolom nomor_telepon pada membership jika belum ada
+    try:
+        conn.execute("ALTER TABLE membership ADD COLUMN nomor_telepon TEXT UNIQUE")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
     # Default Admin
     admin_exists = conn.execute("SELECT * FROM users WHERE username='admin'").fetchone()
     if not admin_exists:
-        conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-                     ('admin', generate_password_hash('admin123'), 'admin'))
+        conn.execute("INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
+                     ('admin', generate_password_hash('admin123'), 'admin', 'Administrator'))
     
     # Default Settings
     if not conn.execute("SELECT * FROM settings WHERE key='modal_kembalian'").fetchone():
@@ -389,6 +447,9 @@ def order():
     antrian = request.form.get('antrian')
     pelanggan = request.form.get('pelanggan')
     cart_data = json.loads(request.form.get('cart_data'))
+    is_dine_in = 1 if request.form.get('is_dine_in') == 'true' or request.form.get('is_dine_in') == '1' else 0
+    is_student_discount = 1 if request.form.get('is_student_discount') == 'true' or request.form.get('is_student_discount') == '1' else 0
+    member_number_raw = request.form.get('member_number', '').strip()
     
     conn = get_db_connection()
     
@@ -406,11 +467,27 @@ def order():
         total_semua += subtotal
         menu_str_list.append(f"{item['nama']}\n{item['qty']}  {item['harga']}  {subtotal}")
     
+    # Apply student discount if applicable (10% diskon, hanya untuk dine in)
+    if is_student_discount and is_dine_in:
+        total_semua = int(total_semua * 0.9)
+
+    member_id = None
+    points_earned = 0
+    if member_number_raw:
+        member_number_clean = ''.join(filter(str.isdigit, member_number_raw))
+        if member_number_clean:
+            member = conn.execute("SELECT id FROM membership WHERE nomor_telepon=? OR nomor_member=?", (member_number_clean, member_number_clean)).fetchone()
+            if member:
+                member_id = member['id']
+                if total_semua >= 65000:
+                    points_earned = 1
+                    conn.execute("UPDATE membership SET poin = poin + ? WHERE id=?", (points_earned, member_id))
+    
     menu_final = " | ".join(menu_str_list)
     cart_json = json.dumps(cart_data)
     
-    conn.execute("INSERT INTO orders (meja, pelanggan, menu, total, waktu, status, cart_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                 (antrian, pelanggan, menu_final, total_semua, waktu, 'belum_bayar', cart_json))
+    conn.execute("INSERT INTO orders (meja, pelanggan, menu, total, waktu, status, cart_json, is_dine_in, is_student_discount, membership_id, points_earned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (antrian, pelanggan, menu_final, total_semua, waktu, 'belum_bayar', cart_json, is_dine_in, is_student_discount, member_id, points_earned))
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
@@ -676,14 +753,410 @@ def login():
         conn.close()
         if row and check_password_hash(row['password'], pw):
             session['user'] = user
-            return redirect(url_for('admin'))
+            session['role'] = row['role'] if 'role' in row.keys() else 'crew'
+            session['fullname'] = row['fullname'] if 'fullname' in row.keys() else ''
+            if session.get('role') == 'admin':
+                return redirect(url_for('admin'))
+            return redirect(url_for('index'))
         return "Login Gagal", 401
     return render_template('login.html')
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        fullname = request.form.get('fullname')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if not fullname or not username or not password:
+            return "Semua field harus diisi", 400
+        conn = get_db_connection()
+        exists = conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone()
+        if exists:
+            conn.close()
+            return "Username sudah digunakan", 400
+        conn.execute("INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
+                     (username, generate_password_hash(password), 'crew', fullname))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('login'))
+    return render_template('signup.html')
 
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     return redirect(url_for('login'))
+
+@app.route('/membership')
+@login_required
+def membership():
+    conn = get_db_connection()
+    members = conn.execute("SELECT * FROM membership ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return render_template('membership.html', members=members)
+
+@app.route('/register_membership', methods=['POST'])
+@login_required
+def register_membership():
+    nama = request.form.get('nama')
+    nomor_telepon = request.form.get('nomor_telepon')
+    
+    if not nama or not nomor_telepon:
+        return "Nama dan nomor telepon harus diisi", 400
+    
+    # Normalisasi nomor telepon (hapus spasi, karakter khusus)
+    nomor_telepon_clean = ''.join(filter(str.isdigit, nomor_telepon))
+    
+    if len(nomor_telepon_clean) < 10:
+        return "Nomor telepon tidak valid (minimal 10 digit)", 400
+    
+    conn = get_db_connection()
+    
+    # Pastikan kolom nomor_telepon ada
+    try:
+        cursor = conn.execute("PRAGMA table_info(membership)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'nomor_telepon' not in columns:
+            conn.execute("ALTER TABLE membership ADD COLUMN nomor_telepon TEXT UNIQUE")
+            conn.commit()
+    except:
+        pass
+    
+    # Cek apakah nomor telepon sudah terdaftar (coba pakai nomor_telepon, fallback ke nomor_member)
+    try:
+        exists = conn.execute("SELECT 1 FROM membership WHERE nomor_telepon=?", (nomor_telepon_clean,)).fetchone()
+    except:
+        # Jika kolom tidak ada, cek nomor_member saja
+        exists = conn.execute("SELECT 1 FROM membership WHERE nomor_member=?", (nomor_telepon_clean,)).fetchone()
+    
+    if exists:
+        conn.close()
+        return "Nomor telepon sudah terdaftar", 400
+    
+    created_at = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    # Gunakan nomor telepon sebagai nomor_member untuk kemudahan customer mengingat
+    try:
+        conn.execute("INSERT INTO membership (nama, nomor_member, nomor_telepon, poin, created_at) VALUES (?, ?, ?, ?, ?)",
+                     (nama, nomor_telepon_clean, nomor_telepon_clean, 0, created_at))
+    except:
+        # Fallback jika kolom nomor_telepon tidak ada
+        conn.execute("INSERT INTO membership (nama, nomor_member, poin, created_at) VALUES (?, ?, ?, ?)",
+                     (nama, nomor_telepon_clean, 0, created_at))
+    
+    conn.commit()
+    conn.close()
+    return redirect(url_for('membership'))
+
+@app.route('/membership_lookup/<member_number>')
+def membership_lookup(member_number):
+    member_number_clean = ''.join(filter(str.isdigit, member_number or ''))
+    if not member_number_clean:
+        return jsonify({'found': False}), 404
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("PRAGMA table_info(membership)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'nomor_telepon' not in columns:
+            conn.execute("ALTER TABLE membership ADD COLUMN nomor_telepon TEXT")
+            conn.commit()
+    except Exception:
+        pass
+
+    member = None
+    try:
+        member = conn.execute(
+            "SELECT id, nama, nomor_member, nomor_telepon FROM membership WHERE nomor_telepon=? OR nomor_member=?",
+            (member_number_clean, member_number_clean)
+        ).fetchone()
+    except sqlite3.OperationalError:
+        member = conn.execute(
+            "SELECT id, nama, nomor_member FROM membership WHERE nomor_member=?",
+            (member_number_clean,)
+        ).fetchone()
+    conn.close()
+
+    if not member:
+        return jsonify({'found': False}), 404
+
+    return jsonify({
+        'found': True,
+        'id': member['id'],
+        'nama': member['nama'],
+        'nomor_member': member['nomor_member']
+    })
+
+@app.route('/print_membership_card/<int:member_id>')
+@login_required
+def print_membership_card(member_id):
+    """Display membership card for printing"""
+    conn = get_db_connection()
+    member = conn.execute("SELECT * FROM membership WHERE id=?", (member_id,)).fetchone()
+    conn.close()
+    
+    if not member:
+        return "Member tidak ditemukan", 404
+    
+    # Return HTML page for printing instead of PDF
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Kartu Membership - {member['nama']}</title>
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            
+            body {{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                background: #f0f0f0;
+                font-family: Arial, sans-serif;
+                padding: 20px;
+            }}
+            
+            .card {{
+                width: 85.6mm;
+                height: 53.98mm;
+                background: linear-gradient(135deg, #FFB600 0%, #FFA500 100%);
+                border-radius: 10px;
+                padding: 8mm;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                color: #000;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }}
+            
+            .card::before {{
+                content: '';
+                position: absolute;
+                top: -50%;
+                right: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+                animation: shine 3s infinite;
+            }}
+            
+            @keyframes shine {{
+                0% {{ transform: translate(0, 0); }}
+                100% {{ transform: translate(20px, 20px); }}
+            }}
+            
+            .card-content {{
+                position: relative;
+                z-index: 2;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                justify-content: space-between;
+            }}
+            
+            .card-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 1px solid rgba(0,0,0,0.2);
+                padding-bottom: 3mm;
+                margin-bottom: 3mm;
+            }}
+            
+            .brand {{
+                font-weight: bold;
+                font-size: 10pt;
+                line-height: 1.2;
+            }}
+            
+            .brand-title {{
+                font-size: 12pt;
+                font-weight: bold;
+                margin-top: 1mm;
+            }}
+            
+            .logo {{
+                font-size: 14pt;
+            }}
+            
+            .member-name {{
+                font-size: 14pt;
+                font-weight: bold;
+                margin-bottom: 2mm;
+                text-transform: uppercase;
+            }}
+            
+            .member-number {{
+                font-size: 18pt;
+                font-weight: bold;
+                letter-spacing: 1px;
+                font-family: 'Courier New', monospace;
+                background: rgba(0,0,0,0.1);
+                padding: 2mm 3mm;
+                border-radius: 3mm;
+                margin-bottom: 3mm;
+                display: inline-block;
+            }}
+            
+            .footer {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                border-top: 1px solid rgba(0,0,0,0.2);
+                padding-top: 2mm;
+            }}
+            
+            .points {{
+                font-size: 16pt;
+                font-weight: bold;
+            }}
+            
+            .points-label {{
+                font-size: 8pt;
+            }}
+            
+            .valid-date {{
+                font-size: 8pt;
+                text-align: right;
+            }}
+            
+            .valid-date-label {{
+                font-size: 7pt;
+            }}
+            
+            @media print {{
+                body {{
+                    background: white;
+                    padding: 0;
+                    display: block;
+                }}
+                
+                .card {{
+                    box-shadow: none;
+                    margin: 0;
+                    page-break-after: always;
+                }}
+                
+                .print-button {{
+                    display: none;
+                }}
+            }}
+            
+            .print-button {{
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                background: #FFB600;
+                color: #000;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                cursor: pointer;
+                z-index: 1000;
+            }}
+            
+            .print-button:hover {{
+                opacity: 0.9;
+                background: #FFA500;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="card-content">
+                <div class="card-header">
+                    <div>
+                        <div class="brand">KAPIO</div>
+                        <div class="brand-title">MEMBERSHIP</div>
+                    </div>
+                    <div class="logo">💳</div>
+                </div>
+                
+                <div>
+                    <div class="member-name">{member['nama'][:20]}</div>
+                    <div class="member-number">{member['nomor_member']}</div>
+                </div>
+                
+                <div class="footer">
+                    <div>
+                        <div class="points-label">POIN</div>
+                        <div class="points">{member['poin']}</div>
+                    </div>
+                    <div class="valid-date">
+                        <div class="valid-date-label">Since</div>
+                        {member['created_at'][:10]}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="print-button" onclick="window.print();">🖨️ Cetak</button>
+    </body>
+    </html>
+    """
+    
+    return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+
+@app.route('/add_points_to_member/<int:member_id>/<int:points>', methods=['POST'])
+@login_required
+def add_points_to_member(member_id, points):
+    conn = get_db_connection()
+    conn.execute("UPDATE membership SET poin = poin + ? WHERE id = ?", (points, member_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/redeem_points/<int:member_id>/<int:points>/<reward_type>', methods=['POST'])
+@login_required
+def redeem_points(member_id, points, reward_type):
+    conn = get_db_connection()
+    member = conn.execute("SELECT poin FROM membership WHERE id=?", (member_id,)).fetchone()
+    if not member or member['poin'] < points:
+        conn.close()
+        return "Poin tidak cukup", 400
+    
+    conn.execute("UPDATE membership SET poin = poin - ? WHERE id = ?", (points, member_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': f'Reward {reward_type} berhasil ditukarkan'})
+
+@app.route('/add_membership_to_order/<int:order_id>/<int:member_id>', methods=['POST'])
+@login_required
+def add_membership_to_order(order_id, member_id):
+    conn = get_db_connection()
+    order = conn.execute("SELECT total FROM orders WHERE id=?", (order_id,)).fetchone()
+    if not order:
+        conn.close()
+        return "Order tidak ditemukan", 400
+    
+    # Calculate points: minimum Rp65.000 = 1 point, tidak berlaku kelipatan
+    if order['total'] >= 65000:
+        points = 1
+        conn.execute("UPDATE orders SET membership_id=?, points_earned=? WHERE id=?", (member_id, points, order_id))
+        conn.execute("UPDATE membership SET poin = poin + ? WHERE id=?", (points, member_id))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/delete_member/<int:member_id>', methods=['POST'])
+@login_required
+def delete_member(member_id):
+    """Delete a member from the membership database"""
+    conn = get_db_connection()
+    conn.execute("DELETE FROM membership WHERE id=?", (member_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 @app.route('/archive', methods=['POST'])
 @login_required

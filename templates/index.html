@@ -91,6 +91,7 @@
             <input type="hidden" name="antrian" id="antrianVal">
             <input type="hidden" name="pelanggan" id="pelangganVal">
             <input type="hidden" name="cart_data" id="cart_data">
+            <input type="hidden" name="member_number" id="memberNumberVal">
         </form>
     </div>
 
@@ -122,6 +123,31 @@
                 <input type="text" id="custName" placeholder="Masukkan Nama Anda"
                     style="height: 55px; font-size: 17px; text-align: center; font-weight: 700;">
             </div>
+
+            <!-- Dine In Toggle -->
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="isDineIn" checked style="width: 18px; height: 18px; accent-color: var(--accent);">
+                    <span style="font-weight: 600;">🍽️ Dine In</span>
+                </label>
+            </div>
+
+            <!-- Student Discount Toggle (only shown for dine in) -->
+            <div id="studentDiscountSection" style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="isStudentDiscount" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                    <span style="font-weight: 600;">🎓 Diskon Pelajar/Mahasiswa 10%</span>
+                </label>
+            </div>
+
+            <!-- Membership Section -->
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+                <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">💳 CIRCLE KAPIO MEMBER</p>
+                <input type="text" id="memberNumber" placeholder="No. Telepon / WhatsApp Member" 
+                    style="width: 100%; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 13px;">
+                <p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">Masukkan nomor telepon/WhatsApp member lalu tekan PESAN SEKARANG. Sistem akan menghubungkan secara otomatis.</p>
+            </div>
+
             <div
                 style="display: flex; justify-content: space-between; font-weight: 800; font-size: 22px; margin-bottom: 20px;">
                 <span>Total</span>
@@ -235,6 +261,17 @@
             const modal = document.getElementById('cartModal');
             modal.style.right = modal.style.right === '0px' ? '-500px' : '0px';
         }
+
+        // Dine In / Student Discount logic
+        document.getElementById('isDineIn').addEventListener('change', function() {
+            const section = document.getElementById('studentDiscountSection');
+            if (!this.checked) {
+                document.getElementById('isStudentDiscount').checked = false;
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
+            }
+        });
 
         let tempItem = null;
 
@@ -425,7 +462,7 @@
             renderCart();
         }
 
-        function submitOrder() {
+        async function submitOrder() {
             if (cart.length === 0) return alert("Pilih menu dulu!");
             const pelanggan = document.getElementById('custName').value;
             if (!pelanggan) return alert("Silakan masukkan nama Anda!");
@@ -433,7 +470,58 @@
             document.getElementById('antrianVal').value = "0"; // Server will assign next number
             document.getElementById('pelangganVal').value = pelanggan;
             document.getElementById('cart_data').value = JSON.stringify(cart);
-            document.getElementById('orderForm').submit();
+            
+            const isDineIn = document.getElementById('isDineIn').checked ? '1' : '0';
+            const isStudentDiscount = document.getElementById('isStudentDiscount').checked ? '1' : '0';
+            const memberNumber = document.getElementById('memberNumber').value.trim();
+            document.getElementById('memberNumberVal').value = memberNumber;
+            
+            const form = document.getElementById('orderForm');
+            let dineInInput = form.querySelector('input[name="is_dine_in"]');
+            let studentDiscountInput = form.querySelector('input[name="is_student_discount"]');
+            
+            if (!dineInInput) {
+                dineInInput = document.createElement('input');
+                dineInInput.type = 'hidden';
+                dineInInput.name = 'is_dine_in';
+                form.appendChild(dineInInput);
+            }
+            
+            if (!studentDiscountInput) {
+                studentDiscountInput = document.createElement('input');
+                studentDiscountInput.type = 'hidden';
+                studentDiscountInput.name = 'is_student_discount';
+                form.appendChild(studentDiscountInput);
+            }
+            
+            dineInInput.value = isDineIn;
+            studentDiscountInput.value = isStudentDiscount;
+
+            if (memberNumber) {
+                let memberInfo = null;
+                try {
+                    const response = await fetch(`/membership_lookup/${encodeURIComponent(memberNumber)}`);
+                    if (response.ok) {
+                        memberInfo = await response.json();
+                    }
+                } catch (error) {
+                    console.error('Lookup member failed', error);
+                }
+
+                if (memberInfo && memberInfo.found) {
+                    const confirmMessage = `Member terdaftar:\nNama: ${memberInfo.nama}\nNomor: ${memberInfo.nomor_member}\n\nTekan OK untuk melanjutkan pesanan.`;
+                    if (!confirm(confirmMessage)) {
+                        return;
+                    }
+                } else {
+                    const confirmMessage = `Nomor member ${memberNumber} tidak ditemukan.\nTekan OK untuk melanjutkan pesanan tanpa mengaitkan member, atau Cancel untuk memperbaiki nomor.`;
+                    if (!confirm(confirmMessage)) {
+                        return;
+                    }
+                }
+            }
+            
+            form.submit();
         }
 
         function scrollToCat(id) {

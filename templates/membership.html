@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .membership-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Membership Card Styles */
+        .membership-card-container {
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        
+        .membership-card {
+            background: linear-gradient(135deg, #FFB600 0%, #FFA500 100%);
+            border-radius: 15px;
+            padding: 25px;
+            min-height: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .membership-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .card-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+        
+        .card-brand {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .card-brand-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .card-logo {
+            font-size: 24px;
+        }
+        
+        .card-member-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .card-member-number {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        
+        .card-points {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .card-points-label {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        
+        .card-valid-date {
+            font-size: 11px;
+            text-align: right;
+            opacity: 0.8;
+        }
+        
+        .card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn-action {
+            padding: 10px;
+            font-size: 12px;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-action:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+        
+        .btn-print {
+            grid-column: 1;
+        }
+        
+        .btn-delete {
+            grid-column: 2;
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+        
+        .btn-delete:hover {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .register-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .register-form input, .register-form label {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .register-form input {
+            grid-column: auto;
+        }
+        
+        .register-form input[type="tel"] {
+            grid-column: 1 / -1;
+        }
+        
+        .register-form button {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .register-form button:hover {
+            opacity: 0.9;
+        }
+        
+        h1 {
+            color: var(--accent);
+            margin-bottom: 25px;
+        }
+        
+        h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .info-alert {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            color: #1565c0;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body style="background: var(--bg-primary);">
+
+<div class="membership-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="margin: 0;">🎯 CIRCLE KAPIO MEMBERSHIP</h1>
+        <a href="/admin" style="display: inline-block; padding: 10px 15px; background: var(--accent); color: white; border-radius: 8px; text-decoration: none; font-weight: 600; transition: opacity 0.3s; white-space: nowrap;">
+            <i class="fas fa-arrow-left"></i> Kembali ke Admin
+        </a>
+    </div>
+    
+    <!-- Register Member Section -->
+    <div class="card">
+        <h2>Daftarkan Member Baru</h2>
+        <div class="info-alert">
+            <i class="fas fa-info-circle"></i> Nomor Member otomatis menggunakan nomor telepon/WhatsApp Anda untuk kemudahan mengingat
+        </div>
+        <form method="POST" action="{{ url_for('register_membership') }}" class="register-form">
+            <div class="form-group">
+                <label for="nama">Nama Lengkap *</label>
+                <input type="text" id="nama" name="nama" placeholder="Masukkan nama lengkap" required>
+            </div>
+            <div class="form-group">
+                <label for="nomor_telepon">Nomor Telepon/WhatsApp *</label>
+                <input type="tel" id="nomor_telepon" name="nomor_telepon" placeholder="+62 atau 08xx" required pattern="[0-9\s\-\+]{10,}" title="Minimal 10 digit">
+            </div>
+            <button type="submit"><i class="fas fa-user-plus"></i> Daftarkan Member</button>
+        </form>
+    </div>
+    
+    <!-- Members List -->
+    <div class="card">
+        <h2><i class="fas fa-id-card"></i> Daftar Member ({{ members|length }})</h2>
+        {% if members %}
+        <div class="members-grid">
+            {% for member in members %}
+            <div class="membership-card-container">
+                <div class="membership-card">
+                    <div class="card-content">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-brand">KAPIO</div>
+                                <div class="card-brand-title">MEMBERSHIP</div>
+                            </div>
+                            <div class="card-logo">💳</div>
+                        </div>
+                        
+                        <div class="card-member-name">{{ member['nama'][:25] }}</div>
+                        <div class="card-member-number">{{ member['nomor_member'] }}</div>
+                        
+                        <div class="card-footer">
+                            <div>
+                                <div class="card-points-label">POIN</div>
+                                <div class="card-points">{{ member['poin'] }}</div>
+                            </div>
+                            <div class="card-valid-date">
+                                Since<br>{{ member['created_at'][:10] }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <a href="/print_membership_card/{{ member['id'] }}" class="btn-action btn-print" title="Download Kartu Member">
+                        <i class="fas fa-download"></i> Cetak Kartu
+                    </a>
+                    <button class="btn-action btn-delete" onclick="deleteMember({{ member['id'] }}, '{{ member['nama'] }}')" title="Hapus Member">
+                        <i class="fas fa-trash"></i> Hapus
+                    </button>
+                </div>
+                
+                <!-- Reward Buttons -->
+                <div style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px;">
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;"><i class="fas fa-gift"></i> Rewards Tersedia:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        {% if member['poin'] >= 5 %}
+                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 5, 'Minuman Gratis')">
+                            <i class="fas fa-cup"></i> 5 Poin
+                        </button>
+                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 5, 'Diskon 5%')">
+                            <i class="fas fa-percentage"></i> Diskon 5%
+                        </button>
+                        {% else %}
+                        <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; text-align: center; padding: 8px;">
+                            Poin {{ member['poin'] }}/5 - Perlu {{ 5 - member['poin'] }} poin lagi
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                        {% if member['poin'] >= 10 %}
+                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 10, 'Makanan Gratis')">
+                            <i class="fas fa-utensils"></i> 10 Poin
+                        </button>
+                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 10, 'Diskon 10%')">
+                            <i class="fas fa-percentage"></i> Diskon 10%
+                        </button>
+                        {% else %}
+                        <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; text-align: center; padding: 8px;">
+                            Poin {{ member['poin'] }}/10 - Perlu {{ 10 - member['poin'] }} poin lagi
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 30px;">
+            <i class="fas fa-inbox"></i> Belum ada member terdaftar
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Info Section -->
+    <div class="card" style="background: linear-gradient(135deg, var(--accent) 0%, rgba(255,200,0,0.1) 100%); border: 1px solid var(--accent);">
+        <h2 style="color: #000;"><i class="fas fa-book"></i> Syarat & Ketentuan</h2>
+        <div style="color: #000;">
+            <p><strong>Cara Mendapatkan Poin:</strong></p>
+            <ul>
+                <li>Setiap transaksi minimal Rp65.000 = 1 poin</li>
+                <li>Berlaku khusus untuk dine in</li>
+                <li>Tidak berlaku kelipatan transaksi (Rp130.000 = 1 poin, bukan 2)</li>
+            </ul>
+            <p><strong>Tukar Reward:</strong></p>
+            <ul>
+                <li>5 Poin → 1 Minuman gratis pilihan atau Diskon 5%</li>
+                <li>10 Poin → 1 Makanan/Snack gratis pilihan atau Diskon 10%</li>
+                <li>Reward dapat ditukarkan pada kunjungan berikutnya</li>
+                <li>Reward tidak dapat diuangkan</li>
+            </ul>
+            <p><strong>Nomor Member:</strong></p>
+            <ul>
+                <li>Nomor member adalah nomor telepon/WhatsApp Anda</li>
+                <li>Tunjukkan nomor ini saat transaksi untuk mengumpulkan poin</li>
+                <li>Unduh dan simpan kartu membership untuk kemudahan</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+function redeemPoints(memberId, points, rewardType) {
+    if (confirm(`Tukarkan ${points} poin untuk ${rewardType}?`)) {
+        fetch(`/redeem_points/${memberId}/${points}/${encodeURIComponent(rewardType)}`, {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert(d.message);
+                location.reload();
+            } else {
+                alert('Gagal menukar poin');
+            }
+        });
+    }
+}
+
+function deleteMember(memberId, memberName) {
+    if (confirm(`Apakah yakin menghapus member ${memberName}?`)) {
+        fetch(`/delete_member/${memberId}`, {
+            method: 'POST'
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Member berhasil dihapus');
+                location.reload();
+            } else {
+                alert('Gagal menghapus member');
+            }
+        });
+    }
+}
+</script>
+
+</body>
+</html>
