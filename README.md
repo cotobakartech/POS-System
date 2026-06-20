@@ -195,6 +195,6 @@ POS-System/
 
 ---
 
-© 2026 **PT Bikin Orang Sukses (BOS)**.  
+© 2026 **Cotobakartech**.  
 Developed & Supported by **Cotobakartech**.  
 All Rights Reserved.
