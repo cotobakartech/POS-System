@@ -20,8 +20,8 @@
         <header class="header"
             style="margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
             <div>
-                <h1 style="font-weight: 800; letter-spacing: -1px; font-size: 32px;">SELF ORDER 🛒</h1>
-                <p style="color: var(--text-secondary); font-size: 14px;">Silakan pilih kategori dan menu Anda</p>
+                <h1 style="font-weight: 800; letter-spacing: -1px; font-size: 32px;">ORDER MENU 🛒</h1>
+                <p style="color: var(--text-secondary); font-size: 14px;">Sistem POS by cotobakartech</p>
             </div>
         </header>
 
@@ -65,6 +65,9 @@
                     {% endif %}
                     <div class="content">
                         <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">{{ m.nama }}</h3>
+                        {% if m.deskripsi %}
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">{{ m.deskripsi }}</p>
+                        {% endif %}
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; flex-direction: column;">
                                 {% if m.diskon > 0 %}
@@ -120,32 +123,72 @@
         <div
             style="flex-shrink: 0; padding-top: 15px; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 20px);">
             <div class="input-group" style="margin-bottom: 15px;">
-                <input type="text" id="custName" placeholder="Masukkan Nama Anda"
+                <input type="text" id="custName" placeholder="Masukkan Nama Pelanggan"
                     style="height: 55px; font-size: 17px; text-align: center; font-weight: 700;">
             </div>
 
-            <!-- Dine In Toggle -->
-            <div style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="isDineIn" checked style="width: 18px; height: 18px; accent-color: var(--accent);">
-                    <span style="font-weight: 600;">🍽️ Dine In</span>
+            <!-- Dine In / Take Away Selection -->
+            <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <label id="lblDineIn" style="background: var(--surface); padding: 12px; border-radius: 12px; border: 1px solid var(--accent); cursor: pointer; text-align: center; font-weight: 600; color: var(--accent); transition: 0.2s;">
+                    <input type="radio" name="orderType" value="dine_in" checked style="display:none;" onchange="toggleOrderType()">
+                    🍽️ Dine In
+                </label>
+                <label id="lblTakeAway" style="background: var(--surface); padding: 12px; border-radius: 12px; border: 1px solid var(--border); cursor: pointer; text-align: center; font-weight: 600; color: var(--text-primary); transition: 0.2s;">
+                    <input type="radio" name="orderType" value="take_away" style="display:none;" onchange="toggleOrderType()">
+                    🥡 Take Away
                 </label>
             </div>
 
+            <!-- Take Away Source Section -->
+            <div id="takeAwaySourceSection" style="display: none; margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+                <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">SUMBER PESANAN</p>
+                <select id="takeAwaySource" style="width: 100%; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 14px; margin: 0; font-weight: 600;">
+                    <option value="Umum">Umum (Bawa Pulang)</option>
+                    <option value="ShopeeFood">ShopeeFood</option>
+                    <option value="GoFood">GoFood</option>
+                    <option value="GrabFood">GrabFood</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+
             <!-- Student Discount Toggle (only shown for dine in) -->
-            <div id="studentDiscountSection" style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+            <div id="studentDiscountSection"
+                style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <input type="checkbox" id="isStudentDiscount" style="width: 18px; height: 18px; accent-color: var(--accent);">
+                    <input type="checkbox" id="isStudentDiscount"
+                        style="width: 18px; height: 18px; accent-color: var(--accent);">
                     <span style="font-weight: 600;">🎓 Diskon Pelajar/Mahasiswa 10%</span>
                 </label>
             </div>
 
             <!-- Membership Section -->
-            <div style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
-                <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">💳 CIRCLE KAPIO MEMBER</p>
-                <input type="text" id="memberNumber" placeholder="No. Telepon / WhatsApp Member" 
-                    style="width: 100%; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 13px;">
-                <p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">Masukkan nomor telepon/WhatsApp member lalu tekan PESAN SEKARANG. Sistem akan menghubungkan secara otomatis.</p>
+            <div id="membershipSection"
+                style="margin-bottom: 15px; padding: 12px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border);">
+                <p style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">💳
+                    CIRCLE KAPIO MEMBER</p>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <input type="text" id="memberNumber" placeholder="No. Telepon / WhatsApp Member"
+                        style="width: 100%; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 13px; margin: 0;">
+                    <button type="button" class="btn btn-primary"
+                        style="padding: 10px 15px; font-size: 12px; border-radius: 8px;"
+                        onclick="checkMemberBtn()">Cek</button>
+                </div>
+                <div id="memberProfile"
+                    style="display: none; margin-top: 10px; padding: 12px; background: rgba(234, 179, 8, 0.05); border: 1px dashed var(--accent); border-radius: 10px;">
+                    <p style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">Nama:
+                        <span id="mNameTxt">-</span>
+                    </p>
+                    <p style="font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px;">Cashback:
+                        Rp <span id="mCashbackTxt">0</span></p>
+
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-primary);">
+                        <input type="checkbox" id="useCashbackCb" onchange="toggleUseCashback()"
+                            style="width: 16px; height: 16px; margin: 0;"> Gunakan Cashback
+                    </label>
+                </div>
+                <p style="margin-top: 10px; font-size: 11px; color: var(--text-secondary);">Masukkan nomor telepon
+                    member lalu tekan Cek untuk melihat saldo cashback.</p>
             </div>
 
             <div
@@ -188,7 +231,7 @@
             </div>
 
             <!-- Variant Section -->
-            <div id="variantSection" style="display: none; display: flex; flex-direction: column; gap: 20px;">
+            <div id="variantSection" style="display: none; flex-direction: column; gap: 20px;">
                 <!-- Dynamically filled categories -->
             </div>
 
@@ -262,15 +305,36 @@
             modal.style.right = modal.style.right === '0px' ? '-500px' : '0px';
         }
 
-        // Dine In / Student Discount logic
-        document.getElementById('isDineIn').addEventListener('change', function() {
-            const section = document.getElementById('studentDiscountSection');
-            if (!this.checked) {
+        // Dine In / Take Away logic
+        function toggleOrderType() {
+            const isDineIn = document.querySelector('input[name="orderType"]:checked').value === 'dine_in';
+            
+            // Update active styling
+            const lblDineIn = document.getElementById('lblDineIn');
+            const lblTakeAway = document.getElementById('lblTakeAway');
+            
+            lblDineIn.style.borderColor = isDineIn ? 'var(--accent)' : 'var(--border)';
+            lblDineIn.style.color = isDineIn ? 'var(--accent)' : 'var(--text-primary)';
+            
+            lblTakeAway.style.borderColor = !isDineIn ? 'var(--accent)' : 'var(--border)';
+            lblTakeAway.style.color = !isDineIn ? 'var(--accent)' : 'var(--text-primary)';
+            
+            // Show/Hide sections
+            document.getElementById('studentDiscountSection').style.display = isDineIn ? 'block' : 'none';
+            document.getElementById('membershipSection').style.display = isDineIn ? 'block' : 'none';
+            document.getElementById('takeAwaySourceSection').style.display = !isDineIn ? 'block' : 'none';
+            
+            if (!isDineIn) {
                 document.getElementById('isStudentDiscount').checked = false;
-                section.style.display = 'none';
-            } else {
-                section.style.display = 'block';
+                if (document.getElementById('useCashbackCb')) {
+                    document.getElementById('useCashbackCb').checked = false;
+                }
             }
+            updateFinalTotalVisual();
+        }
+
+        document.getElementById('isStudentDiscount').addEventListener('change', function () {
+            updateFinalTotalVisual();
         });
 
         let tempItem = null;
@@ -302,7 +366,7 @@
                     const variants = JSON.parse(card.getAttribute('data-varjson') || '[]');
                     variants.forEach((group, gIdx) => {
                         const groupDiv = document.createElement('div');
-                        
+
                         // Handle both old format (string) and new format (array of objects)
                         let options = [];
                         if (typeof group.options === 'string') {
@@ -312,7 +376,7 @@
                             // New format: [{name: "Single", price: 0}, {name: "Double", price: 5000}]
                             options = group.options;
                         }
-                        
+
                         const isMultiple = group.is_multiple;
                         let vHtml = `<p style="font-size: 12px; font-weight: 700; margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase;">${group.title} ${isMultiple ? '(Bisa pilih > 1)' : ''}</p>`;
                         vHtml += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">`;
@@ -413,9 +477,6 @@
                 cart.push({ id, nama: finalNama, qty: 1, harga: parseInt(harga), diskon, original_harga: parseInt(originalHarga) });
             }
             renderCart();
-
-            const modal = document.getElementById('cartModal');
-            if (modal.style.right !== '0px') toggleCart();
         }
 
         function renderCart() {
@@ -453,7 +514,98 @@
             });
             el.innerHTML = html;
             countEl.innerText = count;
-            totalEl.innerText = "Rp " + total.toLocaleString('id-ID').replace(/,/g, '.');
+            updateFinalTotalVisual();
+        }
+
+        let memberCashbackBalance = 0;
+
+        function checkMemberBtn() {
+            const num = document.getElementById('memberNumber').value.trim();
+            if (!num) return alert("Masukkan nomor telepon member!");
+
+            fetch(`/membership_lookup/${encodeURIComponent(num)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found) {
+                        memberCashbackBalance = data.saldo_cashback || 0;
+                        document.getElementById('mNameTxt').innerText = data.nama;
+                        document.getElementById('mCashbackTxt').innerText = memberCashbackBalance.toLocaleString('id-ID');
+                        document.getElementById('memberProfile').style.display = 'block';
+                        document.getElementById('useCashbackCb').checked = false;
+                        updateFinalTotalVisual();
+                    } else {
+                        alert("Nomor member tidak ditemukan!");
+                        resetMemberProfile();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Gagal menghubungkan ke server member.");
+                    resetMemberProfile();
+                });
+        }
+
+        function resetMemberProfile() {
+            memberCashbackBalance = 0;
+            document.getElementById('mNameTxt').innerText = '-';
+            document.getElementById('mCashbackTxt').innerText = '0';
+            document.getElementById('memberProfile').style.display = 'none';
+            if (document.getElementById('useCashbackCb')) document.getElementById('useCashbackCb').checked = false;
+            updateFinalTotalVisual();
+        }
+
+        function toggleUseCashback() {
+            updateFinalTotalVisual();
+        }
+
+        function getCartTotal() {
+            let total = 0;
+            cart.forEach(item => {
+                total += item.qty * item.harga;
+            });
+            return total;
+        }
+
+        function getFinalTotal() {
+            let total = getCartTotal();
+
+            // Apply student discount 10% (only if dine in is checked)
+            const isDineIn = document.querySelector('input[name="orderType"]:checked').value === 'dine_in';
+            const isStudentDiscount = document.getElementById('isStudentDiscount').checked;
+            if (isStudentDiscount && isDineIn) {
+                total = Math.round(total * 0.9);
+            }
+
+            // Apply cashback redemption
+            const useCashbackCb = document.getElementById('useCashbackCb');
+            const useCashback = useCashbackCb && useCashbackCb.checked;
+            if (useCashback && memberCashbackBalance > 0) {
+                const redeemed = Math.min(memberCashbackBalance, total);
+                total -= redeemed;
+            }
+
+            return total;
+        }
+
+        function updateFinalTotalVisual() {
+            const totalEl = document.getElementById("totalLabel");
+            const finalTotal = getFinalTotal();
+            totalEl.innerText = "Rp " + finalTotal.toLocaleString('id-ID').replace(/,/g, '.');
+
+            // Update checking balance visual details
+            const useCashback = document.getElementById('useCashbackCb');
+            if (useCashback && useCashback.checked) {
+                let maxRedeemable = getCartTotal();
+                const isDineIn = document.querySelector('input[name="orderType"]:checked').value === 'dine_in';
+                const isStudentDiscount = document.getElementById('isStudentDiscount').checked;
+                if (isStudentDiscount && isDineIn) {
+                    maxRedeemable = Math.round(maxRedeemable * 0.9);
+                }
+                const actualRedeemed = Math.min(memberCashbackBalance, maxRedeemable);
+                document.getElementById('mCashbackTxt').innerText = `${memberCashbackBalance.toLocaleString('id-ID')} (Dipakai: Rp ${actualRedeemed.toLocaleString('id-ID')})`;
+            } else if (document.getElementById('mCashbackTxt')) {
+                document.getElementById('mCashbackTxt').innerText = memberCashbackBalance.toLocaleString('id-ID');
+            }
         }
 
         function updateQty(index, delta) {
@@ -464,38 +616,69 @@
 
         async function submitOrder() {
             if (cart.length === 0) return alert("Pilih menu dulu!");
-            const pelanggan = document.getElementById('custName').value;
-            if (!pelanggan) return alert("Silakan masukkan nama Anda!");
+            let pelanggan = document.getElementById('custName').value.trim();
+            if (!pelanggan) return alert("Silakan masukkan nama Pelanggan!");
+
+            const isDineIn = document.querySelector('input[name="orderType"]:checked').value === 'dine_in';
+            if (!isDineIn) {
+                const source = document.getElementById('takeAwaySource').value;
+                if (source !== 'Umum') {
+                    pelanggan = `[${source}] ${pelanggan}`;
+                } else {
+                    pelanggan = `[Take Away] ${pelanggan}`;
+                }
+            }
 
             document.getElementById('antrianVal').value = "0"; // Server will assign next number
             document.getElementById('pelangganVal').value = pelanggan;
             document.getElementById('cart_data').value = JSON.stringify(cart);
-            
-            const isDineIn = document.getElementById('isDineIn').checked ? '1' : '0';
+
+            const isDineInValue = isDineIn ? '1' : '0';
             const isStudentDiscount = document.getElementById('isStudentDiscount').checked ? '1' : '0';
             const memberNumber = document.getElementById('memberNumber').value.trim();
             document.getElementById('memberNumberVal').value = memberNumber;
-            
+
             const form = document.getElementById('orderForm');
             let dineInInput = form.querySelector('input[name="is_dine_in"]');
             let studentDiscountInput = form.querySelector('input[name="is_student_discount"]');
-            
+            let redeemCashbackInput = form.querySelector('input[name="redeem_cashback"]');
+
             if (!dineInInput) {
                 dineInInput = document.createElement('input');
                 dineInInput.type = 'hidden';
                 dineInInput.name = 'is_dine_in';
                 form.appendChild(dineInInput);
             }
-            
+            dineInInput.value = isDineInValue;
+
             if (!studentDiscountInput) {
                 studentDiscountInput = document.createElement('input');
                 studentDiscountInput.type = 'hidden';
                 studentDiscountInput.name = 'is_student_discount';
                 form.appendChild(studentDiscountInput);
             }
-            
+
+            if (!redeemCashbackInput) {
+                redeemCashbackInput = document.createElement('input');
+                redeemCashbackInput.type = 'hidden';
+                redeemCashbackInput.name = 'redeem_cashback';
+                form.appendChild(redeemCashbackInput);
+            }
+
             dineInInput.value = isDineIn;
             studentDiscountInput.value = isStudentDiscount;
+
+            // Calculate cashback amount
+            let redeemAmount = 0;
+            const useCashbackCb = document.getElementById('useCashbackCb');
+            if (useCashbackCb && useCashbackCb.checked && memberCashbackBalance > 0) {
+                let maxRedeemable = getCartTotal();
+                if (document.getElementById('isStudentDiscount').checked && document.getElementById('isDineIn').checked) {
+                    maxRedeemable = Math.round(maxRedeemable * 0.9);
+                }
+                redeemAmount = Math.min(memberCashbackBalance, maxRedeemable);
+            }
+            redeemCashbackInput.value = redeemAmount;
 
             if (memberNumber) {
                 let memberInfo = null;
@@ -520,7 +703,7 @@
                     }
                 }
             }
-            
+
             form.submit();
         }
 
@@ -531,10 +714,26 @@
         function filterMenu() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let cards = document.getElementsByClassName('menu-card');
+
+            // Sembunyikan atau tunjukkan menu card secara individual
             for (let card of cards) {
                 let name = card.getAttribute('data-name');
-                card.parentElement.style.display = name.indexOf(input) > -1 ? "block" : "none";
+                card.style.display = name.indexOf(input) > -1 ? "block" : "none";
             }
+
+            // Sembunyikan judul kategori dan grid jika semua menu di dalamnya tersembunyi
+            const grids = document.querySelectorAll('.menu-grid');
+            grids.forEach(grid => {
+                const visibleCards = Array.from(grid.querySelectorAll('.menu-card')).filter(card => card.style.display !== 'none');
+                const header = grid.previousElementSibling; // Tag h2
+                if (visibleCards.length === 0) {
+                    grid.style.display = 'none';
+                    if (header && header.tagName === 'H2') header.style.display = 'none';
+                } else {
+                    grid.style.display = ''; // Kembalikan ke CSS default (grid)
+                    if (header && header.tagName === 'H2') header.style.display = 'block';
+                }
+            });
         }
     </script>
 </body>

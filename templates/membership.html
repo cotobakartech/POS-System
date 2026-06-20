@@ -291,8 +291,8 @@
                         
                         <div class="card-footer">
                             <div>
-                                <div class="card-points-label">POIN</div>
-                                <div class="card-points">{{ member['poin'] }}</div>
+                                <div class="card-points-label">SALDO CASHBACK</div>
+                                <div class="card-points">Rp {{ "{:,.0f}".format(member['saldo_cashback'] or 0).replace(",", ".") }}</div>
                             </div>
                             <div class="card-valid-date">
                                 Since<br>{{ member['created_at'][:10] }}
@@ -310,37 +310,9 @@
                     </button>
                 </div>
                 
-                <!-- Reward Buttons -->
-                <div style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px;">
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;"><i class="fas fa-gift"></i> Rewards Tersedia:</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        {% if member['poin'] >= 5 %}
-                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 5, 'Minuman Gratis')">
-                            <i class="fas fa-cup"></i> 5 Poin
-                        </button>
-                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 5, 'Diskon 5%')">
-                            <i class="fas fa-percentage"></i> Diskon 5%
-                        </button>
-                        {% else %}
-                        <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; text-align: center; padding: 8px;">
-                            Poin {{ member['poin'] }}/5 - Perlu {{ 5 - member['poin'] }} poin lagi
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-                        {% if member['poin'] >= 10 %}
-                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 10, 'Makanan Gratis')">
-                            <i class="fas fa-utensils"></i> 10 Poin
-                        </button>
-                        <button class="btn-small" onclick="redeemPoints({{ member['id'] }}, 10, 'Diskon 10%')">
-                            <i class="fas fa-percentage"></i> Diskon 10%
-                        </button>
-                        {% else %}
-                        <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; text-align: center; padding: 8px;">
-                            Poin {{ member['poin'] }}/10 - Perlu {{ 10 - member['poin'] }} poin lagi
-                        </div>
-                        {% endif %}
-                    </div>
+                <!-- Cashback Info -->
+                <div style="margin-top: 15px; padding: 15px; background: var(--bg-primary); border-radius: 8px; font-size: 12px; color: var(--text-secondary); text-align: center; border: 1px dashed var(--border);">
+                    <i class="fas fa-coins"></i> Saldo dapat digunakan langsung saat transaksi di kasir.
                 </div>
             </div>
             {% endfor %}
@@ -354,26 +326,20 @@
 
     <!-- Info Section -->
     <div class="card" style="background: linear-gradient(135deg, var(--accent) 0%, rgba(255,200,0,0.1) 100%); border: 1px solid var(--accent);">
-        <h2 style="color: #000;"><i class="fas fa-book"></i> Syarat & Ketentuan</h2>
+        <h2 style="color: #000;"><i class="fas fa-book"></i> Syarat & Ketentuan Cashback</h2>
         <div style="color: #000;">
-            <p><strong>Cara Mendapatkan Poin:</strong></p>
+            <p><strong>Ketentuan Perolehan Cashback (Tiered):</strong></p>
             <ul>
-                <li>Setiap transaksi minimal Rp65.000 = 1 poin</li>
-                <li>Berlaku khusus untuk dine in</li>
-                <li>Tidak berlaku kelipatan transaksi (Rp130.000 = 1 poin, bukan 2)</li>
+                <li>Belanja minimal <strong>Rp 35.000+</strong> mendapatkan cashback sebesar <strong>2%</strong></li>
+                <li>Belanja minimal <strong>Rp 100.000+</strong> mendapatkan cashback sebesar <strong>3%</strong></li>
+                <li>Belanja minimal <strong>Rp 200.000+</strong> mendapatkan cashback sebesar <strong>4%</strong></li>
+                <li>Belanja minimal <strong>Rp 350.000+</strong> mendapatkan cashback sebesar <strong>5%</strong></li>
             </ul>
-            <p><strong>Tukar Reward:</strong></p>
+            <p><strong>Penggunaan Cashback:</strong></p>
             <ul>
-                <li>5 Poin → 1 Minuman gratis pilihan atau Diskon 5%</li>
-                <li>10 Poin → 1 Makanan/Snack gratis pilihan atau Diskon 10%</li>
-                <li>Reward dapat ditukarkan pada kunjungan berikutnya</li>
-                <li>Reward tidak dapat diuangkan</li>
-            </ul>
-            <p><strong>Nomor Member:</strong></p>
-            <ul>
-                <li>Nomor member adalah nomor telepon/WhatsApp Anda</li>
-                <li>Tunjukkan nomor ini saat transaksi untuk mengumpulkan poin</li>
-                <li>Unduh dan simpan kartu membership untuk kemudahan</li>
+                <li>Akumulasi saldo cashback dapat digunakan untuk memotong langsung total pembayaran pada transaksi berikutnya.</li>
+                <li>Penebusan (Redeem) cashback dilakukan dengan memasukkan nomor member dan mencentang "Gunakan Cashback" saat memesan.</li>
+                <li>Saldo cashback tidak dapat diuangkan (dapat dicairkan dalam bentuk uang tunai).</li>
             </ul>
         </div>
     </div>

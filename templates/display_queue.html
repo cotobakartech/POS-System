@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Antrian TV - POS System by Cotobakartech</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #06080c 0%, #111622 100%);
+            height: 100vh;
+            width: 100vw;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Fullscreen Layout */
+        .queue-board-fullscreen {
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+            flex-shrink: 0;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .brand-logo i {
+            font-size: 32px;
+            color: var(--accent);
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .brand-logo h1 {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .live-time {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        /* Columns Layout */
+        .queue-columns {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            flex-grow: 1;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+
+        .queue-column {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .queue-column-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .queue-column-title.preparing {
+            color: #f59e0b;
+        }
+
+        .queue-column-title.ready {
+            color: #10b981;
+        }
+
+        .queue-items-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: min-content;
+            gap: 20px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 5px;
+            align-content: start;
+        }
+
+        .queue-items-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .queue-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 90px;
+            transition: all 0.3s ease;
+        }
+
+        .queue-item.pending {
+            border-left: 5px solid #f59e0b;
+        }
+
+        .queue-item.siap {
+            border-left: 5px solid #10b981;
+            background: rgba(16, 185, 129, 0.08);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+        }
+
+        .queue-number {
+            font-size: 52px;
+            font-weight: 900;
+            color: var(--text-primary);
+            letter-spacing: -1px;
+        }
+
+        .queue-item.siap .queue-number {
+            color: #10b981;
+            animation: text-pulse 1.5s infinite;
+        }
+
+        .queue-name {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .empty-queue {
+            grid-column: span 3;
+            color: var(--text-secondary);
+            font-size: 18px;
+            text-align: center;
+            padding-top: 50px;
+            font-style: italic;
+        }
+
+        /* Overlay Start */
+        .overlay-start {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0a0c10;
+            z-index: 5000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .overlay-start.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Animations */
+        @keyframes text-pulse {
+            0% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 1;
+                text-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+            }
+
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+        .pulse-new {
+            animation: bounce-pulse 0.5s ease infinite alternate;
+        }
+
+        @keyframes bounce-pulse {
+            0% {
+                transform: scale(1);
+                border-color: #10b981;
+                box-shadow: 0 0 5px #10b981;
+            }
+
+            100% {
+                transform: scale(1.08);
+                border-color: #10b981;
+                box-shadow: 0 0 25px #10b981;
+            }
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            padding: 0 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Start Overlay for audio activation and Fullscreen -->
+    <div id="overlayStart" class="overlay-start">
+        <h2 style="font-weight: 800; color: var(--accent); letter-spacing: -0.5px;">PAPAN ANTRIAN TV</h2>
+        <p style="color: var(--text-secondary); max-width: 400px; text-align: center; font-size: 14px;">Klik tombol di
+            bawah ini untuk memulai display antrian TV dengan chime suara aktif.</p>
+        <button class="btn btn-primary glow-accent" style="padding: 16px 36px; font-size: 16px;"
+            onclick="startTvDisplay()">
+            <i class="fas fa-play"></i> Mulai Layar TV
+        </button>
+    </div>
+
+    <main class="queue-board-fullscreen">
+        <div class="queue-header">
+            <div class="brand-logo">
+                <i class="fas fa-list-ol"></i>
+                <h1>KAPIO - PAPAN ANTRIAN</h1>
+            </div>
+            <div id="liveClock" class="live-time">
+                <i class="far fa-clock"></i>
+                <span id="clockText">00:00:00</span>
+            </div>
+        </div>
+
+        <div class="queue-columns">
+            <!-- Column: Preparing -->
+            <div class="queue-column">
+                <div class="queue-column-title preparing">
+                    <i class="fas fa-spinner fa-pulse"></i> Sedang Disiapkan
+                </div>
+                <div id="preparingList" class="queue-items-list">
+                    <div class="empty-queue">Memuat data...</div>
+                </div>
+            </div>
+
+            <!-- Column: Ready -->
+            <div class="queue-column">
+                <div class="queue-column-title ready">
+                    <i class="fas fa-check-circle"></i> Siap Diambil
+                </div>
+                <div id="readyList" class="queue-items-list">
+                    <div class="empty-queue">Memuat data...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Informational Bar -->
+        <div class="bottom-bar">
+            <span>📢 Silakan tunjukkan nomor antrean Anda di area PICK UP ORDER saat mengambil pesanan</span>
+        </div>
+    </main>
+
+    <script>
+        // Start TV Display Fullscreen & Audio Permission
+        function startTvDisplay() {
+            document.getElementById('overlayStart').classList.add('hidden');
+
+            // Attempt to go Fullscreen
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+
+            // Play a silent buffer to initialize audio context
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const buffer = audioCtx.createBuffer(1, 1, 22050);
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioCtx.destination);
+                source.start(0);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clockText').innerText = `${hours}:${minutes}:${seconds}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Synthetic Chime Sound using Web Audio API
+        function playChime() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // Chime 1
+                let osc1 = audioCtx.createOscillator();
+                let gain1 = audioCtx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                gain1.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+                osc1.start(audioCtx.currentTime);
+                osc1.stop(audioCtx.currentTime + 0.8);
+
+                // Chime 2
+                let osc2 = audioCtx.createOscillator();
+                let gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(440.00, audioCtx.currentTime + 0.15); // A4
+                gain2.gain.setValueAtTime(0.25, audioCtx.currentTime + 0.15);
+                gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.95);
+                osc2.start(audioCtx.currentTime + 0.15);
+                osc2.stop(audioCtx.currentTime + 0.95);
+            } catch (e) {
+                console.warn("Audio Context playback failed: ", e);
+            }
+        }
+
+        // Live Queue Polling
+        let previousSiapIds = new Set();
+        let isFirstPoll = true;
+
+        function pollQueue() {
+            fetch('/api/active_orders')
+                .then(res => res.json())
+                .then(data => {
+                    const preparingContainer = document.getElementById('preparingList');
+                    const readyContainer = document.getElementById('readyList');
+
+                    let preparingHtml = '';
+                    let readyHtml = '';
+                    let currentSiapIds = new Set();
+                    let hasNewReady = false;
+
+                    data.forEach(order => {
+                        if (order.status === 'siap') {
+                            currentSiapIds.add(order.id);
+
+                            // Check if this was NOT previously marked as siap
+                            const isNew = !previousSiapIds.has(order.id) && !isFirstPoll;
+                            if (isNew) {
+                                hasNewReady = true;
+                            }
+
+                            readyHtml += `
+                                <div class="queue-item siap ${isNew ? 'pulse-new' : ''}">
+                                    <span class="queue-number">${order.meja}</span>
+                                </div>
+                            `;
+                        } else {
+                            // belum_bayar or pending
+                            preparingHtml += `
+                                <div class="queue-item pending">
+                                    <span class="queue-number">${order.meja}</span>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    preparingContainer.innerHTML = preparingHtml || '<div class="empty-queue">Tidak ada antrian</div>';
+                    readyContainer.innerHTML = readyHtml || '<div class="empty-queue">Tidak ada antrian</div>';
+
+                    if (hasNewReady) {
+                        playChime();
+                    }
+
+                    previousSiapIds = currentSiapIds;
+                    isFirstPoll = false;
+                })
+                .catch(err => console.error("Error polling antrian: ", err));
+        }
+
+        // Poll every 3 seconds for quick updates
+        setInterval(pollQueue, 3000);
+        pollQueue();
+    </script>
+</body>
+
+</html>

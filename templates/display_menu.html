@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display Menu - POS System by Cotobakartech</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #06080c 0%, #111622 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f8fafc;
+        }
+
+        /* ===== FULLSCREEN WRAPPER ===== */
+        .board {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            padding: clamp(8px, 1.5vw, 28px) clamp(10px, 2vw, 40px);
+            gap: clamp(6px, 1vh, 16px);
+        }
+
+        /* ===== HEADER ===== */
+        .board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 1vw, 16px);
+        }
+
+        .brand-logo i {
+            font-size: clamp(18px, 2vw, 30px);
+            color: #eab308;
+            text-shadow: 0 0 12px rgba(234, 179, 8, 0.4);
+        }
+
+        .brand-logo h1 {
+            font-size: clamp(14px, 1.8vw, 28px);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .live-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(11px, 1.2vw, 18px);
+            font-weight: 600;
+            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.02);
+            padding: clamp(5px, 0.6vh, 10px) clamp(10px, 1vw, 18px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* ===== CATEGORY GRID (ALL CATEGORIES IN ONE ROW) ===== */
+        .categories-grid {
+            display: flex;
+            flex-direction: row;
+            gap: clamp(6px, 1vw, 20px);
+            flex: 1;
+            min-height: 0;
+            /* CRITICAL: prevents flex overflow */
+            overflow: hidden;
+        }
+
+        /* ===== CATEGORY COLUMN ===== */
+        .cat-col {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: clamp(12px, 1.5vw, 24px);
+            padding: clamp(8px, 1vw, 20px);
+            overflow: hidden;
+        }
+
+        .cat-title {
+            font-size: clamp(9px, 1vw, 16px);
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #eab308;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+            padding-bottom: clamp(5px, 0.6vh, 12px);
+            margin-bottom: clamp(5px, 0.6vh, 12px);
+            flex-shrink: 0;
+        }
+
+        /* ===== MENU ITEMS LIST ===== */
+        .cat-items {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: clamp(3px, 0.5vh, 8px);
+        }
+
+        /* ===== SINGLE MENU ROW — AUTO SCALES HEIGHT ===== */
+        .menu-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            min-height: 0;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: clamp(6px, 0.8vw, 14px);
+            padding: clamp(3px, 0.4vw, 10px) clamp(6px, 0.8vw, 16px);
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .menu-row-left {
+            display: flex;
+            align-items: center;
+            gap: clamp(5px, 0.6vw, 12px);
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Photo / Placeholder */
+        .item-img {
+            width: clamp(28px, 3.5vw, 58px);
+            height: clamp(28px, 3.5vw, 58px);
+            border-radius: clamp(5px, 0.6vw, 12px);
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+        }
+
+        .item-placeholder {
+            width: clamp(28px, 3.5vw, 58px);
+            height: clamp(28px, 3.5vw, 58px);
+            border-radius: clamp(5px, 0.6vw, 12px);
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(12px, 1.5vw, 24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+        }
+
+        .item-details {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .item-name {
+            font-size: clamp(9px, 1vw, 16px);
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-tag {
+            display: inline-block;
+            font-size: clamp(7px, 0.65vw, 10px);
+            padding: 1px 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Price */
+        .menu-row-right {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .discount-badge {
+            display: inline-block;
+            background: #ef4444;
+            color: white;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: clamp(6px, 0.6vw, 9px);
+            font-weight: 800;
+            margin-bottom: 1px;
+        }
+
+        .old-price {
+            display: block;
+            font-size: clamp(7px, 0.7vw, 11px);
+            color: #94a3b8;
+            text-decoration: line-through;
+            line-height: 1.2;
+        }
+
+        .item-price {
+            display: block;
+            font-size: clamp(9px, 1.1vw, 17px);
+            font-weight: 800;
+            color: #eab308;
+            white-space: nowrap;
+        }
+
+        /* ===== PROMO BAR ===== */
+        .promo-bar {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            font-size: clamp(9px, 0.9vw, 13px);
+            font-weight: 700;
+            color: #eab308;
+            background: rgba(234, 179, 8, 0.06);
+            border: 1px solid rgba(234, 179, 8, 0.15);
+            border-radius: 10px;
+            padding: clamp(5px, 0.6vh, 10px) 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="board">
+
+        <!-- HEADER -->
+        <div class="board-header">
+            <div class="brand-logo">
+                <i class="fas fa-coffee"></i>
+                <div>
+                    <h1>KAPIO — DAFTAR MENU</h1>
+                    <span
+                        style="font-size: clamp(8px, 0.9vw, 12px); color: #94a3b8; font-weight: 600; display: block; margin-top: 2px; letter-spacing: 0.5px;">Part
+                        of PT. ARBA SUKSES WISATA | ROYUU</span>
+                    <span
+                        style="font-size: clamp(8px, 0.9vw, 12px); color: #94a3b8; font-weight: 600; display: block; margin-top: 2px; letter-spacing: 0.5px;">Sistem
+                        by cotobakartech</span>
+                </div>
+            </div>
+            <div class="live-time">
+                <i class="far fa-clock"></i>
+                <span id="clockText">00:00:00</span>
+            </div>
+        </div>
+
+        <!-- ALL CATEGORIES IN ONE ROW, NO SCROLL -->
+        <div class="categories-grid">
+            {% set show_on_tv_menus = menus | selectattr('show_on_tv', 'equalto', 1) | list %}
+            {% set active_menus = show_on_tv_menus if show_on_tv_menus | length > 0 else menus %}
+            {% set categories = active_menus | map(attribute='kategori') | unique | list | sort %}
+
+            {% for cat in categories %}
+            <div class="cat-col">
+                <div class="cat-title">
+                    <i class="fas fa-mug-hot"></i> {{ cat }}
+                </div>
+                <div class="cat-items">
+                    {% for m in active_menus if m.kategori == cat %}
+                    <div class="menu-row">
+                        <div class="menu-row-left">
+                            {% if m.gambar %}
+                            <img class="item-img" src="{{ url_for('static', filename='menu/' + m.gambar) }}"
+                                alt="{{ m.nama }}">
+                            {% else %}
+                            <div class="item-placeholder">☕</div>
+                            {% endif %}
+                            <div class="item-details">
+                                <div class="item-name">{{ m.nama }}</div>
+                                {% if m.deskripsi %}
+                                <div class="item-desc" style="font-size: clamp(7px, 0.8vw, 12px); color: #94a3b8; margin-top: 2px;">{{ m.deskripsi }}</div>
+                                {% endif %}
+                                {% if m.has_opt %}<span class="item-tag">Minuman</span>{% endif %}
+                                {% if m.has_variant %}<span class="item-tag">Varian</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="menu-row-right">
+                            {% if m.diskon > 0 %}
+                            <span class="discount-badge">-{{ m.diskon }}%</span>
+                            <span class="old-price">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</span>
+                            <span class="item-price">Rp {{ "{:,.0f}".format(m.harga * (100 - m.diskon) /
+                                100).replace(",", ".") }}</span>
+                            {% else %}
+                            <span class="item-price">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- PROMO BAR -->
+        <div class="promo-bar">
+            <span>💡 Jadilah Circle KAPIO Membership dan dapatkan cashback hingga 5%!</span>
+            <span>•</span>
+            <span>📢 Tunjukkan Kartu Pelajar atau KTM untuk diskon 10%!</span>
+        </div>
+
+    </div>
+
+    <script>
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clockText').innerText =
+                [now.getHours(), now.getMinutes(), now.getSeconds()]
+                    .map(n => String(n).padStart(2, '0')).join(':');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+
+</html>

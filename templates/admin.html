@@ -1,483 +1,1377 @@
 <!DOCTYPE html>
 <html lang="id" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POS System by COTOBAKARTECH - Cashier Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body class="page-admin">
 
-<div class="admin-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar glass">
-        <div style="margin-bottom: 40px; text-align: center;">
-            <h2 style="font-weight: 800; letter-spacing: -1px; color: var(--accent);">CASHIER HUB</h2>
-            <p style="font-size: 12px; color: var(--text-secondary);">POS System by COTOBAKARTECH</p>
-        </div>
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar glass">
+            <div style="margin-bottom: 40px; text-align: center;">
+                <h2 style="font-weight: 800; letter-spacing: -1px; color: var(--accent);">CASHIER HUB</h2>
+                <p style="font-size: 12px; color: var(--text-secondary);">POS System by COTOBAKARTECH</p>
+            </div>
 
-        <nav style="display: flex; flex-direction: column; gap: 10px;">
-            <div id="navDashboard" class="sidebar-item active" onclick="switchAdminTab('dashboard')">
-                <i class="fas fa-th-large"></i> Dashboard
-            </div>
-            <div id="navMenu" class="sidebar-item" onclick="switchAdminTab('menu')">
-                <i class="fas fa-utensils"></i> Kelola Menu
-            </div>
-            <div id="navRecipe" class="sidebar-item" onclick="switchAdminTab('recipe')">
-                <i class="fas fa-list-check"></i> Kelola Resep
-            </div>
-            <a href="/inventory" class="sidebar-item">
-                <i class="fas fa-boxes"></i> Inventaris
-            </a>
-            <a href="/membership" class="sidebar-item">
-                <i class="fas fa-id-card"></i> Membership
-            </a>
-            <a href="/reports" class="sidebar-item">
-                <i class="fas fa-chart-bar"></i> Laporan
-            </a>
-            <a href="/logout" class="sidebar-item" style="color: #ef4444; margin-top: 10px;">
-                <i class="fas fa-sign-out-alt" style="color: #ef4444;"></i> Keluar
-            </a>
-        </nav>
+            <nav style="display: flex; flex-direction: column; gap: 10px;">
+                <div id="navDashboard" class="sidebar-item active" onclick="switchAdminTab('dashboard')">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </div>
+                <div id="navMenu" class="sidebar-item" onclick="switchAdminTab('menu')">
+                    <i class="fas fa-utensils"></i> Kelola Menu
+                </div>
+                <div id="navRecipe" class="sidebar-item" onclick="switchAdminTab('recipe')">
+                    <i class="fas fa-list-check"></i> Kelola Resep
+                </div>
+                <div id="navInventory" class="sidebar-item" onclick="switchAdminTab('inventory')">
+                    <i class="fas fa-boxes"></i> Inventaris
+                </div>
+                <div id="navMembership" class="sidebar-item" onclick="switchAdminTab('membership')">
+                    <i class="fas fa-id-card"></i> Membership
+                </div>
+                <div id="navReports" class="sidebar-item" onclick="switchAdminTab('reports')">
+                    <i class="fas fa-chart-bar"></i> Laporan
+                </div>
+                <div id="navSettings" class="sidebar-item" onclick="switchAdminTab('settings')">
+                    <i class="fas fa-cog"></i> Pengaturan
+                </div>
+                <div
+                    style="margin: 15px 0 5px 20px; font-size: 10px; color: var(--text-secondary); letter-spacing: 1.5px; font-weight: 800;">
+                    TAMPILAN MONITOR</div>
+                <a href="/display/queue" target="_blank" class="sidebar-item"
+                    style="color: var(--accent); border-color: rgba(234, 179, 8, 0.1); padding: 10px 20px; font-size: 13px;">
+                    <i class="fas fa-list-ol" style="color: var(--accent); font-size: 15px;"></i> TV Papan Antrian
+                </a>
+                <a href="/display/menu" target="_blank" class="sidebar-item"
+                    style="color: var(--accent); border-color: rgba(234, 179, 8, 0.1); padding: 10px 20px; font-size: 13px;">
+                    <i class="fas fa-book-open" style="color: var(--accent); font-size: 15px;"></i> Monitor Menu Kasir
+                </a>
+                <a href="/display" target="_blank" class="sidebar-item"
+                    style="color: var(--text-secondary); border-color: var(--border); padding: 10px 20px; font-size: 13px; opacity: 0.7;">
+                    <i class="fas fa-columns" style="color: var(--text-secondary); font-size: 15px;"></i> Tampilan
+                    Gabung (Split)
+                </a>
+                <a href="/logout" class="sidebar-item" style="color: #ef4444; margin-top: 15px;">
+                    <i class="fas fa-sign-out-alt" style="color: #ef4444;"></i> Keluar
+                </a>
+            </nav>
 
-        <div style="margin-top: auto; padding-top: 30px;">
-            <div class="glass" style="padding: 15px; border-radius: 12px;">
-                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">MODE TAMPILAN</p>
-                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;" onclick="toggleTheme()">
-                    <i class="fas fa-moon" id="themeIcon"></i> <span id="themeText">Lighting Mode</span>
-                </button>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">PENGATURAN SUARA</p>
-                <select id="voiceSelect" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px;">
-                    <option>Memuat suara...</option>
-                </select>
-                <div style="margin-top: 20px;">
-                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">PRINTER THERMAL</p>
-                    <form action="/save_printer_settings" method="POST">
-                        <label style="font-size: 11px; color: var(--text-secondary);">Pilih Printer</label>
-                        <select name="thermal_printer_name" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px; margin-bottom: 10px;">
-                            {% if printer_list %}
-                                {% for printer in printer_list %}
-                                <option value="{{ printer }}" {% if printer == selected_printer %}selected{% endif %}>{{ printer }}</option>
+            <div style="margin-top: auto; padding-top: 30px;">
+                <div class="glass" style="padding: 15px; border-radius: 12px;">
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">MODE TAMPILAN</p>
+                    <button class="btn btn-secondary" style="width: 100%;" onclick="toggleTheme()">
+                        <i class="fas fa-moon theme-icon"></i> <span class="theme-text">Lighting Mode</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+                <div>
+                    <button class="btn btn-secondary" onclick="window.location.href='/'" style="margin-bottom: 15px;">
+                        <i class="fas fa-arrow-left"></i> Kembali
+                    </button>
+                    <h1 style="font-weight: 800;">Daftar Pesanan</h1>
+                    <p style="color: var(--text-secondary);">Monitor dan kelola pesanan pelanggan secara real-time.</p>
+                </div>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <input type="text" id="globalKasirName" placeholder="Nama Kasir Aktif" style="height: 40px; border-radius: 8px; font-size: 14px; width: 180px; text-align: center; border: 1px solid var(--accent); background: var(--bg-main); font-weight: bold; color: var(--text-primary);" oninput="localStorage.setItem('globalKasir', this.value)">
+                    </div>
+                    <button class="btn btn-primary glow-accent"
+                        onclick="document.getElementById('archiveModal').style.display='block'">
+                        <i class="fas fa-archive"></i> Arsip Harian
+                    </button>
+                </div>
+            </header>
+
+            <div id="tabDashboard">
+                <div class="stats-grid">
+                    <!-- Stat Card 1 -->
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #f59e0b;">
+                        <div>
+                            <p
+                                style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">
+                                BELUM BAYAR</p>
+                            <h2 id="statBelumBayar"
+                                style="font-size: 32px; font-weight: 800; color: #f59e0b; margin-top: 5px;">{{ orders |
+                                selectattr('status', 'equalto', 'belum_bayar') | list | length }}</h2>
+                        </div>
+                        <div
+                            style="background: rgba(245, 158, 11, 0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-wallet" style="color: #f59e0b; font-size: 20px;"></i>
+                        </div>
+                    </div>
+                    <!-- Stat Card 2 -->
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #3b82f6;">
+                        <div>
+                            <p
+                                style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">
+                                DIPROSES (PENDING)</p>
+                            <h2 id="statPending"
+                                style="font-size: 32px; font-weight: 800; color: #3b82f6; margin-top: 5px;">{{ orders |
+                                selectattr('status', 'equalto', 'pending') | list | length }}</h2>
+                        </div>
+                        <div
+                            style="background: rgba(59, 130, 246, 0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-spinner fa-spin" style="color: #3b82f6; font-size: 20px;"></i>
+                        </div>
+                    </div>
+                    <!-- Stat Card 3 -->
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #10b981;">
+                        <div>
+                            <p
+                                style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">
+                                TOTAL SELESAI</p>
+                            <h2 id="statSelesai"
+                                style="font-size: 32px; font-weight: 800; color: #10b981; margin-top: 5px;">{{ orders |
+                                selectattr('status', 'equalto', 'selesai') | list | length }}</h2>
+                        </div>
+                        <div
+                            style="background: rgba(16, 185, 129, 0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass" style="margin-bottom: 25px; padding: 20px; border-radius: 20px;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-chart-pie" style="color: var(--accent);"></i> Item Terjual Hari Ini
+                    </h3>
+                    {% if items_sold_today %}
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        {% for item_name, qty in items_sold_today.items() %}
+                        <div style="background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); padding: 8px 16px; border-radius: 12px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 14px;">{{ item_name }}</span>
+                            <span style="background: var(--accent); color: #000; font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 6px;">{{ qty }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: var(--text-secondary); font-size: 13px;">Belum ada item yang terjual hari ini.</p>
+                    {% endif %}
+                </div>
+
+                <div class="order-list">
+                    {% for o in orders %}
+                    <div class="order-item glass" data-order-id="{{ o.id }}" data-status="{{ o.status }}"
+                        style="border-left: 6px solid {{ '#f59e0b' if o.status == 'belum_bayar' else '#3b82f6' if o.status == 'pending' else '#8b5cf6' if o.status == 'siap' else '#10b981' }}; padding: 24px; border-radius: 20px;">
+                        <div>
+                            <div
+                                style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                                <span
+                                    style="background: rgba(234, 179, 8, 0.15); color: var(--accent); border: 1px solid rgba(234, 179, 8, 0.3); padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 13px; letter-spacing: 0.5px;">A-{{
+                                    o.meja }}</span>
+                                <span style="font-weight: 700; font-size: 16px; color: var(--text-primary);">{{
+                                    o.pelanggan }}</span>
+                                {% if o.status == 'belum_bayar' %}
+                                <span
+                                    style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">BELUM
+                                    BAYAR</span>
+                                {% elif o.status == 'pending' %}
+                                <span
+                                    style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">DIPROSES</span>
+                                {% elif o.status == 'siap' %}
+                                <span
+                                    style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">SIAP
+                                    DIAMBIL</span>
+                                {% else %}
+                                <span
+                                    style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">SELESAI</span>
+                                {% endif %}
+                            </div>
+                            <div
+                                style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; padding-left: 2px;">
+                                {% for item in o.menu.split('|') %}
+                                <p
+                                    style="font-weight: 600; font-size: 14px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-dot-circle" style="color: var(--accent); font-size: 8px;"></i> {{
+                                    item.strip() }}
+                                </p>
                                 {% endfor %}
-                            {% else %}
-                                <option value="">Tidak ada printer terdeteksi</option>
+                            </div>
+                            <p
+                                style="font-size: 11px; color: var(--text-secondary); margin-top: 15px; display: flex; align-items: center; gap: 5px;">
+                                <i class="far fa-clock"></i> {{ o.waktu }}
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 25px; flex-wrap: wrap;">
+                            <div style="text-align: right;">
+                                <p
+                                    style="font-size: 11px; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.5px;">
+                                    TOTAL TAGIHAN</p>
+                                <p style="font-weight: 800; font-size: 22px; color: var(--accent); margin-top: 2px;">Rp
+                                    {{ "{:,.0f}".format(o.total).replace(",", ".") }}</p>
+                            </div>
+                            {% if o.status == 'belum_bayar' %}
+                            <button class="btn btn-primary"
+                                style="background: #f59e0b; color: #000; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);"
+                                onclick="openPayment('{{ o.id }}', '{{ o.total }}', '{{ o.meja }}')">
+                                <i class="fas fa-wallet"></i> BAYAR
+                            </button>
+                            {% elif o.status == 'pending' or o.status == 'siap' %}
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                                <button class="btn btn-secondary"
+                                    style="background: {{ '#3b82f6' if o.status == 'pending' else '#8b5cf6' }}; color: white; border: none; box-shadow: 0 4px 12px {{ 'rgba(59, 130, 246, 0.2)' if o.status == 'pending' else 'rgba(139, 92, 246, 0.2)' }};"
+                                    onclick="panggilPesanan('{{ o.meja }}', '{{ o.pelanggan }}', '{{ o.id }}')">
+                                    <i class="fas fa-volume-up"></i> PANGGIL
+                                </button>
+                                <button class="btn btn-secondary"
+                                    style="background: #4b5563; color: white; border: none;"
+                                    onclick="printBaristaStruk('{{ o.id }}')">
+                                    <i class="fas fa-print"></i> STRUK BARISTA
+                                </button>
+                                <button class="btn btn-primary"
+                                    style="background: #10b981; color: white; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);"
+                                    onclick="finishOrder('{{ o.id }}', this)">
+                                    <i class="fas fa-check"></i> DIAMBIL
+                                </button>
+                            </div>
                             {% endif %}
-                        </select>
-                        <label style="font-size: 11px; color: var(--text-secondary);">Ukuran Struk</label>
-                        <select name="thermal_printer_width" class="btn btn-secondary" style="width: 100%; font-size: 11px; text-align: left; height: 40px; padding: 0 10px; margin-bottom: 10px;">
-                            <option value="58" {% if selected_width == '58' %}selected{% endif %}>58 mm</option>
-                            <option value="80" {% if selected_width == '80' %}selected{% endif %}>80 mm</option>
-                        </select>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Simpan Printer</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="tabMenu" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <h2 style="font-weight: 800;">Daftar Produk</h2>
+                    <button class="btn btn-primary"
+                        onclick="document.getElementById('addMenuModal').style.display='block'">
+                        <i class="fas fa-plus"></i> Tambah Menu
+                    </button>
+                </div>
+                <div class="glass"
+                    style="padding: 20px; border-radius: 24px; overflow-x: auto; border: 1px solid var(--border);">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>PRODUK</th>
+                                <th>HARGA</th>
+                                <th>DISKON (%)</th>
+                                <th>KATEGORI</th>
+                                <th>AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in menus %}
+                            <tr>
+                                <td style="font-weight: 600; color: var(--text-primary);">{{ m.nama }}</td>
+                                <td style="font-weight: 600;">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</td>
+                                <td style="color: #ef4444; font-weight: 700;">{{ m.diskon }}%</td>
+                                <td>
+                                    <span class="glass"
+                                        style="padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;">
+                                        {{ m.kategori }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <button type="button" class="btn btn-secondary btn-edit"
+                                            style="padding: 6px 12px; font-size: 11px; border-radius: 8px;"
+                                            data-id="{{ m.id }}" data-nama="{{ m.nama | escape }}"
+                                            data-harga="{{ m.harga }}" data-kategori="{{ m.kategori | escape }}"
+                                            data-has-opt="{{ m.has_opt }}" data-diskon="{{ m.diskon }}"
+                                            data-has-note="{{ m.has_note }}" data-has-variant="{{ m.has_variant }}"
+                                            data-variants="{{ (m.variants_json if m.variants_json else '[]') | escape }}"
+                                            data-show-on-tv="{{ m.show_on_tv }}"
+                                            data-deskripsi="{{ m.deskripsi if m.deskripsi else '' | escape }}">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <form action="/del_menu/{{ m.id }}" method="POST"
+                                            onsubmit="return confirm('Hapus menu ini?')">
+                                            <button type="submit" class="btn btn-secondary"
+                                                style="padding: 6px 12px; font-size: 11px; border-radius: 8px; color: #ef4444; border-color: rgba(239,68,68,0.15);">
+                                                <i class="fas fa-trash"></i> Hapus
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB KELOLA RESEP -->
+            <div id="tabRecipe" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h2 style="font-weight: 800; font-size: 24px;">Kelola Resep Produk</h2>
+                    <button class="btn btn-primary"
+                        onclick="document.getElementById('addRecipeModal').style.display='block'">
+                        <i class="fas fa-plus"></i> Tambah Bahan Resep
+                    </button>
+                </div>
+
+                <div class="glass"
+                    style="padding: 20px; border-radius: 24px; overflow-x: auto; border: 1px solid var(--border);">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>PRODUK</th>
+                                <th>BAHAN BAKU</th>
+                                <th>JUMLAH PEMAKAIAN</th>
+                                <th style="text-align: right;">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m_id, data in recipes.items() %}
+                            <tr>
+                                <td
+                                    style="font-weight: 800; vertical-align: top; width: 30%; color: var(--text-primary);">
+                                    {{ data.menu_nama }}
+                                </td>
+                                <td colspan="3" style="padding: 0;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        {% for ing in data.ingredients %}
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                            <td
+                                                style="padding: 12px 20px; color: var(--text-secondary); width: 33.33%;">
+                                                {{ ing.material_nama }}</td>
+                                            <td style="padding: 12px 20px; font-weight: 600; width: 33.33%;">{{
+                                                ing.qty_used }} {{ ing.satuan }}</td>
+                                            <td style="padding: 12px 20px; text-align: right; width: 33.33%;">
+                                                <form action="/del_recipe/{{ ing.id }}" method="POST"
+                                                    onsubmit="return confirm('Hapus bahan ini?')">
+                                                    <button type="submit"
+                                                        style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px;">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </table>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not recipes %}
+                            <tr>
+                                <td colspan="4"
+                                    style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                                    <i class="fas fa-info-circle"></i> Belum ada resep yang terdaftar.
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB PENGATURAN -->
+            <div id="tabSettings" style="display: none;">
+                <div style="margin-bottom: 30px;">
+                    <h2 style="font-weight: 800;">Pengaturan Sistem</h2>
+                    <p style="color: var(--text-secondary);">Konfigurasi printer thermal, koneksi bluetooth, dan
+                        preferensi dashboard.</p>
+                </div>
+
+                <div class="settings-grid">
+                    <!-- KARTU 1: PRINTER BLUETOOTH -->
+                    <div class="settings-card">
+                        <h3><i class="fab fa-bluetooth" style="color: #3b82f6;"></i> Printer Bluetooth</h3>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div class="input-group">
+                                <label
+                                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">PILIH
+                                    PRINTER BLUETOOTH (MAC ADDRESS)</label>
+                                <select id="btMacSelect" style="height: 48px;">
+                                    <option value="">Belum dikonfigurasi</option>
+                                </select>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <button id="btScanBtn" class="btn btn-secondary" onclick="scanBluetoothPrinters()">
+                                    <i class="fas fa-search"></i> Scan Printer
+                                </button>
+                                <button id="btSaveBtn" class="btn btn-primary" onclick="saveBluetoothPrinter()">
+                                    <i class="fas fa-save"></i> Simpan
+                                </button>
+                            </div>
+
+                            <button id="btTestBtn" class="btn btn-secondary"
+                                style="width: 100%; border-color: var(--accent); color: var(--accent);"
+                                onclick="testPrintBluetooth()">
+                                <i class="fas fa-print"></i> Test Cetak Struk
+                            </button>
+
+                            <div class="glass"
+                                style="padding: 12px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                                <i class="fas fa-info-circle"></i> Klik "Scan Printer" untuk mendeteksi printer
+                                Bluetooth di server. Pilih printer lalu klik "Simpan". Pencetakan akan dilakukan oleh
+                                server.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KARTU 2: PRINTER THERMAL LOKAL -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-print" style="color: var(--accent);"></i> Printer Thermal Lokal</h3>
+                        <form action="/save_printer_settings" method="POST"
+                            style="display: flex; flex-direction: column; gap: 15px;">
+                            <div class="input-group">
+                                <label
+                                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">PILIH
+                                    PRINTER SISTEM</label>
+                                <select name="thermal_printer_name" style="height: 48px;">
+                                    {% if printer_list %}
+                                    {% for printer in printer_list %}
+                                    <option value="{{ printer }}" {% if printer==selected_printer %}selected{% endif %}>
+                                        {{ printer }}</option>
+                                    {% endfor %}
+                                    {% else %}
+                                    <option value="">Tidak ada printer terdeteksi</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+
+                            <div class="input-group">
+                                <label
+                                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">LEBAR
+                                    KERTAS STRUK</label>
+                                <select name="thermal_printer_width" style="height: 48px;">
+                                    <option value="58" {% if selected_width=='58' %}selected{% endif %}>58 mm (32
+                                        karakter)</option>
+                                    <option value="80" {% if selected_width=='80' %}selected{% endif %}>80 mm (48
+                                        karakter)</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 5px;">
+                                <i class="fas fa-save"></i> Simpan Printer Lokal
+                            </button>
+
+                            <div class="glass"
+                                style="padding: 12px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                                <i class="fas fa-info-circle"></i> Konfigurasi printer sistem lokal yang terhubung
+                                dengan kabel USB / jaringan di komputer server ini.
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- KARTU 3: PREFERENSI SUARA & TAMPILAN -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-volume-up" style="color: #10b981;"></i> Preferensi Suara & Tema</h3>
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div class="input-group">
+                                <label
+                                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">PILIH
+                                    SUARA PANGGILAN ANTRIAN</label>
+                                <select id="voiceSelect" style="height: 48px;">
+                                    <option>Memuat suara...</option>
+                                </select>
+                            </div>
+
+                            <div class="input-group">
+                                <label
+                                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">TEMA
+                                    APLIKASI KASIR</label>
+                                <button class="btn btn-secondary"
+                                    style="width: 100%; justify-content: flex-start; padding: 12px 20px; height: 48px;"
+                                    type="button" onclick="toggleTheme()">
+                                    <i class="fas fa-moon theme-icon"></i> <span class="theme-text">Lighting Mode</span>
+                                </button>
+                            </div>
+
+                            <div class="glass"
+                                style="padding: 12px; border-radius: 8px; font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                                <i class="fas fa-info-circle"></i> Pilih jenis suara text-to-speech yang paling alami
+                                dalam bahasa Indonesia untuk pemanggilan nomor meja/pelanggan.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB INVENTARIS -->
+            <div id="tabInventory" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h2 style="font-weight: 800;">Manajemen Bahan Baku</h2>
+                        <p style="color: var(--text-secondary);">Pantau stok bahan baku dan kelola inventaris Anda.</p>
+                    </div>
+                    <button class="btn btn-primary glow-accent"
+                        onclick="document.getElementById('addMaterialModal').style.display='block'">
+                        <i class="fas fa-plus"></i> Bahan Baru
+                    </button>
+                </div>
+                <div class="glass"
+                    style="padding: 20px; border-radius: 24px; overflow-x: auto; border: 1px solid var(--border);">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>BAHAN BAKU</th>
+                                <th>STOK</th>
+                                <th>SATUAN</th>
+                                <th>AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in materials %}
+                            <tr>
+                                <td style="font-weight: 700; color: var(--text-primary);">{{ m.nama }}</td>
+                                <td>
+                                    <span
+                                        style="font-size: 18px; font-weight: 800; color: {{ '#ef4444' if m.stok < 5 else 'inherit' }}">
+                                        {{ "{:,.2f}".format(m.stok).replace(",", ".") }}
+                                    </span>
+                                </td>
+                                <td><span class="glass"
+                                        style="padding: 4px 12px; border-radius: 8px; font-size: 12px;">{{ m.satuan
+                                        }}</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-secondary"
+                                            style="padding: 6px 14px; font-size: 12px; border-radius: 8px;"
+                                            onclick="openUpdateMaterialModal('{{ m.id }}', '{{ m.nama }}', '{{ m.satuan }}')"><i
+                                                class="fas fa-edit"></i> Update Stok</button>
+                                        <form action="/del_material/{{ m.id }}" method="POST"
+                                            onsubmit="return confirm('Hapus bahan ini?')">
+                                            <button type="submit" class="btn btn-secondary"
+                                                style="padding: 6px 12px; font-size: 12px; border-radius: 8px; color: #ef4444; border-color: rgba(239,68,68,0.15);"><i
+                                                    class="fas fa-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not materials %}
+                            <tr>
+                                <td colspan="4"
+                                    style="padding: 40px; text-align: center; color: var(--text-secondary);"><i
+                                        class="fas fa-info-circle"></i> Belum ada bahan baku.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB MEMBERSHIP -->
+            <div id="tabMembership" style="display: none;">
+                <div style="margin-bottom: 30px;">
+                    <h2 style="font-weight: 800;">Manajemen Membership</h2>
+                    <p style="color: var(--text-secondary);">Daftarkan dan kelola member CIRCLE KAPIO.</p>
+                </div>
+
+                <!-- Register Form -->
+                <div class="glass"
+                    style="padding: 30px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 30px;">
+                    <h3 style="font-weight: 700; margin-bottom: 20px;"><i class="fas fa-user-plus"
+                            style="color: var(--accent);"></i> Daftarkan Member Baru</h3>
+                    <div
+                        style="background: rgba(59,130,246,0.08); border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: #93c5fd;">
+                        <i class="fas fa-info-circle"></i> Nomor Member otomatis menggunakan nomor telepon/WhatsApp
+                        untuk kemudahan mengingat.
+                    </div>
+                    <form method="POST" action="{{ url_for('register_membership') }}"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="input-group">
+                            <label
+                                style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">NAMA
+                                LENGKAP *</label>
+                            <input type="text" name="nama" placeholder="Masukkan nama lengkap" required>
+                        </div>
+                        <div class="input-group">
+                            <label
+                                style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">NOMOR
+                                TELEPON/WHATSAPP *</label>
+                            <input type="tel" name="nomor_telepon" placeholder="+62 atau 08xx" required
+                                pattern="[0-9\s\-\+]{10,}">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;"><i
+                                    class="fas fa-user-plus"></i> Daftarkan Member</button>
+                        </div>
                     </form>
                 </div>
-            </div>
-        </div>
-    </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-            <div>
-                <button class="btn btn-secondary" onclick="window.location.href='/'" style="margin-bottom: 15px;">
-                    <i class="fas fa-arrow-left"></i> Kembali
-                </button>
-                <h1 style="font-weight: 800;">Daftar Pesanan</h1>
-                <p style="color: var(--text-secondary);">Monitor dan kelola pesanan pelanggan secara real-time.</p>
-            </div>
-            <button class="btn btn-primary glow-accent" onclick="document.getElementById('archiveModal').style.display='block'">
-                <i class="fas fa-archive"></i> Arsip Harian
-            </button>
-        </header>
-
-        <div id="tabDashboard">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <p style="color: var(--text-secondary); font-size: 13px;">BELUM BAYAR</p>
-                    <h2 style="font-size: 32px; font-weight: 800; color: #f59e0b;">{{ orders | selectattr('status', 'equalto', 'belum_bayar') | list | length }}</h2>
-                </div>
-                <div class="stat-card">
-                    <p style="color: var(--text-secondary); font-size: 13px;">DIPROSES (PENDING)</p>
-                    <h2 style="font-size: 32px; font-weight: 800; color: #3b82f6;">{{ orders | selectattr('status', 'equalto', 'pending') | list | length }}</h2>
-                </div>
-                <div class="stat-card">
-                    <p style="color: var(--text-secondary); font-size: 13px;">TOTAL SELESAI</p>
-                    <h2 style="font-size: 32px; font-weight: 800; color: #10b981;">{{ orders | selectattr('status', 'equalto', 'selesai') | list | length }}</h2>
-                </div>
-            </div>
-
-            <div class="order-list">
-                {% for o in orders %}
-                <div class="order-item glass" style="border-left: 5px solid {{ '#f59e0b' if o.status == 'belum_bayar' else '#3b82f6' if o.status == 'pending' else '#10b981' }}">
+                <!-- Members Grid -->
+                <h3 style="font-weight: 700; margin-bottom: 20px;"><i class="fas fa-id-card"
+                        style="color: var(--accent);"></i> Daftar Member ({{ members|length }})</h3>
+                {% if members %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+                    {% for member in members %}
                     <div>
-                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
-                            <span style="background: var(--accent); color: #000; padding: 4px 12px; border-radius: 8px; font-weight: 800; font-size: 14px;">A-{{ o.meja }}</span>
-                            <span style="font-weight: 700; color: var(--text-primary);">{{ o.pelanggan }}</span>
-                            <span style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase;">{{ o.status.replace('_', ' ') }}</span>
+                        <div
+                            style="background: linear-gradient(135deg, #FFB600 0%, #FFA500 100%); border-radius: 15px; padding: 25px; min-height: 190px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); position: relative; overflow: hidden; color: #000; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div
+                                style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);">
+                            </div>
+                            <div style="position: relative; z-index: 2;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 13px;">KAPIO</div>
+                                        <div style="font-size: 16px; font-weight: bold;">MEMBERSHIP</div>
+                                    </div>
+                                    <span style="font-size: 22px;">💳</span>
+                                </div>
+                                <div
+                                    style="font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px;">
+                                    {{ member['nama'][:25] }}</div>
+                                <div
+                                    style="font-size: 15px; font-weight: bold; letter-spacing: 2px; background: rgba(0,0,0,0.1); padding: 6px 10px; border-radius: 8px; display: inline-block; font-family: 'Courier New', monospace; margin-bottom: 12px;">
+                                    {{ member['nomor_member'] }}</div>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2;">
+                                <div>
+                                    <div style="font-size: 11px; opacity: 0.8;">SALDO CASHBACK</div>
+                                    <div style="font-size: 20px; font-weight: bold;">Rp {{
+                                        "{:,.0f}".format(member['saldo_cashback'] or 0).replace(",", ".") }}</div>
+                                </div>
+                                <div style="font-size: 11px; text-align: right; opacity: 0.8;">Since<br>{{
+                                    member['created_at'][:10] }}</div>
+                            </div>
                         </div>
-                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
-                            {% for item in o.menu.split('|') %}
-                            <p style="font-weight: 600; font-size: 14px; color: var(--text-primary);">
-                                <i class="fas fa-caret-right" style="color: var(--accent); font-size: 10px;"></i> {{ item.strip() }}
-                            </p>
-                            {% endfor %}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+                            <a href="/print_membership_card/{{ member['id'] }}" class="btn btn-secondary"
+                                style="text-align: center; text-decoration: none; font-size: 13px;"><i
+                                    class="fas fa-download"></i> Cetak Kartu</a>
+                            <button class="btn btn-secondary"
+                                style="color: #ef4444; border-color: rgba(239,68,68,0.2); font-size: 13px;"
+                                onclick="deleteMemberSPA({{ member['id'] }}, '{{ member['nama'] }}')"><i
+                                    class="fas fa-trash"></i> Hapus</button>
                         </div>
-                        <p style="font-size: 11px; color: var(--text-secondary); margin-top: 10px;">{{ o.waktu }}</p>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 20px;">
-                        <div style="text-align: right;">
-                            <p style="font-size: 12px; color: var(--text-secondary);">TOTAL TAGIHAN</p>
-                            <p style="font-weight: 800; font-size: 20px; color: var(--accent);">Rp {{ "{:,.0f}".format(o.total).replace(",", ".") }}</p>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="glass"
+                    style="padding: 60px; border-radius: 24px; text-align: center; color: var(--text-secondary); border: 1px solid var(--border);">
+                    <i class="fas fa-inbox" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                    <p>Belum ada member terdaftar.</p>
+                </div>
+                {% endif %}
+
+                <!-- T&C Card -->
+                <div class="glass"
+                    style="margin-top: 30px; padding: 25px; border-radius: 24px; border: 1px solid rgba(234,179,8,0.3); background: linear-gradient(135deg, rgba(234,179,8,0.05), transparent);">
+                    <h3 style="font-weight: 700; color: var(--accent); margin-bottom: 15px;"><i class="fas fa-book"></i>
+                        Syarat &amp; Ketentuan Cashback</h3>
+                    <div
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; color: var(--text-secondary);">
+                        <div>
+                            <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Perolehan
+                                Cashback (Tiered):</p>
+                            <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px;">
+                                <li><i class="fas fa-check" style="color: var(--accent);"></i> Belanja <strong>Rp
+                                        35.000+</strong> → cashback <strong>2%</strong></li>
+                                <li><i class="fas fa-check" style="color: var(--accent);"></i> Belanja <strong>Rp
+                                        100.000+</strong> → cashback <strong>3%</strong></li>
+                                <li><i class="fas fa-check" style="color: var(--accent);"></i> Belanja <strong>Rp
+                                        200.000+</strong> → cashback <strong>4%</strong></li>
+                                <li><i class="fas fa-check" style="color: var(--accent);"></i> Belanja <strong>Rp
+                                        350.000+</strong> → cashback <strong>5%</strong></li>
+                            </ul>
                         </div>
-                        {% if o.status == 'belum_bayar' %}
-                        <button class="btn btn-primary" style="background: #f59e0b;" onclick="openPayment('{{ o.id }}', '{{ o.total }}', '{{ o.meja }}')">BAYAR</button>
-                        {% elif o.status == 'pending' %}
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                            <button class="btn btn-secondary" style="background: #3b82f6; color: white;" onclick="panggilPesanan('{{ o.meja }}', '{{ o.pelanggan }}')">
-                                <i class="fas fa-volume-up"></i> PANGGIL
-                            </button>
-                            <button class="btn btn-secondary" style="background: #4b5563; color: white;" onclick="window.location.href='/print_barista/{{ o.id }}'">
-                                <i class="fas fa-print"></i> STRUK BARISTA
-                            </button>
-                            <form action="/finish/{{ o.id }}" method="POST">
-                                <button type="submit" class="btn btn-primary" style="background: #10b981;">DIAMBIL</button>
-                            </form>
+                        <div>
+                            <p style="font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Penggunaan
+                                Cashback:</p>
+                            <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px;">
+                                <li><i class="fas fa-info-circle" style="color: #3b82f6;"></i> Saldo dapat digunakan
+                                    langsung saat transaksi.</li>
+                                <li><i class="fas fa-info-circle" style="color: #3b82f6;"></i> Masukkan nomor member
+                                    &amp; centang "Gunakan Cashback" saat pesan.</li>
+                                <li><i class="fas fa-info-circle" style="color: #3b82f6;"></i> Saldo cashback tidak
+                                    dapat diuangkan.</li>
+                            </ul>
                         </div>
-                        {% endif %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
-        </div>
 
-        <div id="tabMenu" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h2 style="font-weight: 800;">Daftar Produk</h2>
-                <button class="btn btn-primary" onclick="document.getElementById('addMenuModal').style.display='block'">+ Tambah Menu</button>
-            </div>
-            <div class="glass" style="padding: 20px; border-radius: 20px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
-                            <th style="padding: 12px; color: var(--text-secondary);">PRODUK</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">HARGA</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">DISKON (%)</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">KATEGORI</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">AKSI</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m in menus %}
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 12px; font-weight: 600;">{{ m.nama }}</td>
-                            <td style="padding: 12px;">Rp {{ "{:,.0f}".format(m.harga).replace(",", ".") }}</td>
-                            <td style="padding: 12px; color: #ef4444; font-weight: 700;">{{ m.diskon }}%</td>
-                            <td style="padding: 12px;"><span class="glass" style="padding: 3px 10px; border-radius: 5px; font-size: 11px;">{{ m.kategori }}</span></td>
-                            <td style="padding: 12px;">
-                                <div style="display: flex; gap: 10px;">
-                                    <button type="button" class="btn btn-secondary btn-edit" style="padding: 5px 10px; font-size: 12px;" data-id="{{ m.id }}" data-nama="{{ m.nama | escape }}" data-harga="{{ m.harga }}" data-kategori="{{ m.kategori | escape }}" data-has-opt="{{ m.has_opt }}" data-diskon="{{ m.diskon }}" data-has-note="{{ m.has_note }}" data-has-variant="{{ m.has_variant }}" data-variants="{{ (m.variants_json if m.variants_json else '[]') | safe }}">Edit</button>
-                                    <form action="/del_menu/{{ m.id }}" method="POST" onsubmit="return confirm('Hapus menu ini?')">
-                                        <button type="submit" class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px; color: #ef4444;">Hapus</button>
-                                    </form>
+            <!-- TAB LAPORAN -->
+            <div id="tabReports" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h2 style="font-weight: 800;">Laporan &amp; Analitik</h2>
+                        <p style="color: var(--text-secondary);">Analisis performa bisnis Anda secara mendalam (Termasuk Arsip).</p>
+                    </div>
+                    <button class="btn btn-primary" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 12px;" onclick="document.getElementById('addExpenseModal').style.display='flex'">
+                        <i class="fas fa-plus" style="margin-right: 8px;"></i> Input Pengeluaran
+                    </button>
+                </div>
+
+                <!-- Period Tabs -->
+                <div style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255,255,255,0.04); padding: 6px; border-radius: 16px; width: fit-content;">
+                    <button id="rptBtn-hari" class="report-period-btn active" onclick="switchReportPeriod('hari')" style="padding: 8px 20px; border-radius: 10px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: var(--accent); color: #000; transition: all 0.2s;">Hari Ini</button>
+                    <button id="rptBtn-bulan" class="report-period-btn" onclick="switchReportPeriod('bulan')" style="padding: 8px 20px; border-radius: 10px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s;">Bulan Ini</button>
+                    <button id="rptBtn-tahun" class="report-period-btn" onclick="switchReportPeriod('tahun')" style="padding: 8px 20px; border-radius: 10px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s;">Tahun Ini</button>
+                    <button id="rptBtn-semua" class="report-period-btn" onclick="switchReportPeriod('semua')" style="padding: 8px 20px; border-radius: 10px; border: none; font-weight: 700; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-secondary); transition: all 0.2s;">Semua</button>
+                </div>
+
+                <!-- Report Data JSON for JS -->
+                <script>
+                    const reportTotals = {
+                        hari: {
+                            revenue: {{ report_totals.hari_ini.revenue }},
+                            expense: {{ report_totals.hari_ini.expense }},
+                            profit: {{ report_totals.hari_ini.profit }}
+                        },
+                        bulan: {
+                            revenue: {{ report_totals.bulan_ini.revenue }},
+                            expense: {{ report_totals.bulan_ini.expense }},
+                            profit: {{ report_totals.bulan_ini.profit }}
+                        },
+                        tahun: {
+                            revenue: {{ report_totals.tahun_ini.revenue }},
+                            expense: {{ report_totals.tahun_ini.expense }},
+                            profit: {{ report_totals.tahun_ini.profit }}
+                        },
+                        semua: {
+                            revenue: {{ report_totals.semua.revenue }},
+                            expense: {{ report_totals.semua.expense }},
+                            profit: {{ report_totals.semua.profit }}
+                        }
+                    };
+
+                    function formatRp(val) {
+                        return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+                    }
+
+                    function switchReportPeriod(period) {
+                        // Update buttons
+                        document.querySelectorAll('.report-period-btn').forEach(b => {
+                            b.style.background = 'transparent';
+                            b.style.color = 'var(--text-secondary)';
+                        });
+                        const activeBtn = document.getElementById('rptBtn-' + period);
+                        activeBtn.style.background = 'var(--accent)';
+                        activeBtn.style.color = '#000';
+
+                        // Update cards
+                        const d = reportTotals[period];
+                        document.getElementById('rpt-omzet').textContent = formatRp(d.revenue);
+                        document.getElementById('rpt-laba').textContent = formatRp(d.profit);
+                        document.getElementById('rpt-pengeluaran').textContent = formatRp(d.expense);
+
+                        // Toggle Best Seller Lists
+                        document.querySelectorAll('.bestseller-list').forEach(el => {
+                            el.style.display = 'none';
+                        });
+                        const activeList = document.getElementById('bestseller-' + period);
+                        if (activeList) activeList.style.display = 'flex';
+                    }
+                </script>
+
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--accent);">
+                        <div>
+                            <p style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">TOTAL OMZET</p>
+                            <h2 id="rpt-omzet" style="font-size: 28px; font-weight: 800; color: var(--accent); margin-top: 5px;">Rp {{ "{:,.0f}".format(report_totals.hari_ini.revenue).replace(",", ".") }}</h2>
+                        </div>
+                        <div style="background: rgba(234,179,8,0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-coins" style="color: var(--accent); font-size: 20px;"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #10b981;">
+                        <div>
+                            <p style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">TOTAL LABA</p>
+                            <h2 id="rpt-laba" style="font-size: 28px; font-weight: 800; color: #10b981; margin-top: 5px;">Rp {{ "{:,.0f}".format(report_totals.hari_ini.profit).replace(",", ".") }}</h2>
+                        </div>
+                        <div style="background: rgba(16,185,129,0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-chart-line" style="color: #10b981; font-size: 20px;"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card glass"
+                        style="display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #ef4444; cursor: pointer; transition: 0.2s;"
+                        onclick="document.getElementById('addExpenseModal').style.display='flex'">
+                        <div>
+                            <p style="color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">TOTAL PENGELUARAN <i class="fas fa-plus-circle" style="color: #ef4444; margin-left: 5px;"></i></p>
+                            <h2 id="rpt-pengeluaran" style="font-size: 28px; font-weight: 800; color: #ef4444; margin-top: 5px;">Rp {{ "{:,.0f}".format(report_totals.hari_ini.expense).replace(",", ".") }}</h2>
+                        </div>
+                        <div style="background: rgba(239,68,68,0.1); width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-receipt" style="color: #ef4444; font-size: 20px;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass"
+                    style="padding: 30px; border-radius: 24px; margin-bottom: 30px; border: 1px solid var(--border);">
+                    <h3 style="font-weight: 800; margin-bottom: 20px;">Tren Penjualan (30 Hari)</h3>
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+
+                <!-- BEST SELLER SECTION -->
+                <div class="glass" style="padding: 30px; border-radius: 24px; margin-bottom: 30px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h3 style="font-weight: 800; margin-bottom: 4px;">🏆 Best Seller</h3>
+                            <p style="color: var(--text-secondary); font-size: 12px;">Peringkat produk terlaris berdasarkan periode yang dipilih</p>
+                        </div>
+                    </div>
+                    
+                    {% for period in ['hari', 'bulan', 'tahun', 'semua'] %}
+                    <div id="bestseller-{{ period }}" class="bestseller-list" style="display: {{ 'flex' if period == 'hari' else 'none' }}; flex-direction: column; gap: 12px;">
+                        {% set p_bestsellers = bestsellers_by_period[period] %}
+                        {% if p_bestsellers %}
+                            {% set max_qty = p_bestsellers.values() | map(attribute='qty') | max %}
+                            {% for item_name, data in p_bestsellers.items() %}
+                            {% set rank = loop.index %}
+                            {% if rank <= 10 %}
+                            <div style="display: flex; align-items: center; gap: 14px;">
+                                <!-- Rank Badge -->
+                                <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0;
+                                    background: {{ 'linear-gradient(135deg,#eab308,#f59e0b)' if rank == 1 else 'linear-gradient(135deg,#9ca3af,#d1d5db)' if rank == 2 else 'linear-gradient(135deg,#cd7f32,#d97706)' if rank == 3 else 'rgba(255,255,255,0.07)' }};
+                                    color: {{ '#000' if rank <= 3 else 'var(--text-secondary)' }};">
+                                    {{ rank }}
                                 </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- TAB KELOLA RESEP -->
-        <div id="tabRecipe" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h2 style="font-weight: 800; font-size: 24px;">Kelola Resep Produk</h2>
-                <button class="btn btn-primary" onclick="document.getElementById('addRecipeModal').style.display='block'">+ Tambah Bahan Resep</button>
-            </div>
-            
-            <div class="glass" style="padding: 20px; border-radius: 20px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
-                            <th style="padding: 12px; color: var(--text-secondary);">PRODUK</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">BAHAN BAKU</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">JUMLAH PEMAKAIAN</th>
-                            <th style="padding: 12px; color: var(--text-secondary);">AKSI</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m_id, data in recipes.items() %}
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 12px; font-weight: 800; vertical-align: top; width: 30%;">
-                                {{ data.menu_nama }}
-                            </td>
-                            <td colspan="3" style="padding: 0;">
-                                <table style="width: 100%; border-collapse: collapse;">
-                                    {% for ing in data.ingredients %}
-                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
-                                        <td style="padding: 12px; color: var(--text-secondary);">{{ ing.material_nama }}</td>
-                                        <td style="padding: 12px; font-weight: 600;">{{ ing.qty_used }} {{ ing.satuan }}</td>
-                                        <td style="padding: 12px; text-align: right;">
-                                            <form action="/del_recipe/{{ ing.id }}" method="POST" onsubmit="return confirm('Hapus bahan ini?')">
-                                                <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer;">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </table>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% if not recipes %}
-                        <tr>
-                            <td colspan="4" style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                                <i class="fas fa-info-circle"></i> Belum ada resep yang terdaftar.
-                            </td>
-                        </tr>
+                                <!-- Name -->
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-weight: 700; color: var(--text-primary); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        {{ item_name }}
+                                        {% if rank == 1 %}<span style="font-size: 11px; background: rgba(234,179,8,0.15); color: var(--accent); border-radius: 6px; padding: 1px 7px; margin-left: 6px; font-weight: 800;">⭐ TERLARIS</span>{% endif %}
+                                    </div>
+                                    <!-- Progress bar -->
+                                    <div style="height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; margin-top: 6px; overflow: hidden;">
+                                        <div style="height: 100%; border-radius: 3px; width: {{ [((data.qty / max_qty * 100)|round)|int, 5] | max }}%;
+                                            background: {{ 'var(--accent)' if rank == 1 else '#9ca3af' if rank == 2 else '#d97706' if rank == 3 else 'rgba(255,255,255,0.3)' }};
+                                            transition: width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                                <!-- Stats -->
+                                <div style="text-align: right; flex-shrink: 0;">
+                                    <div style="font-weight: 800; font-size: 16px; color: var(--text-primary);">{{ data.qty }} <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">porsi</span></div>
+                                    {% if data.revenue > 0 %}
+                                    <div style="font-size: 11px; color: var(--text-secondary);">Rp {{ "{:,.0f}".format(data.revenue).replace(",", ".") }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                                <i class="fas fa-trophy" style="font-size: 40px; opacity: 0.2; margin-bottom: 12px;"></i>
+                                <p>Belum ada data penjualan pada periode ini.</p>
+                            </div>
                         {% endif %}
-                    </tbody>
-                </table>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <h3 style="font-weight: 800; margin-bottom: 20px;">Arsip Laporan Harian</h3>
+                <div class="order-list">
+                    {% for file in archive_data %}
+                    <div class="order-item glass" style="border-left: 4px solid var(--accent);">
+                        <div>
+                            <h4 style="font-weight: 700; margin-bottom: 5px;">{{ file.nama_file }}</h4>
+                            <p style="font-size: 12px; color: var(--text-secondary);">Omzet: Rp {{
+                                "{:,.0f}".format(file.summary.total_pemasukan).replace(",", ".") }}</p>
+                        </div>
+                        <a href="/download_archive/{{ file.nama_file }}" class="btn btn-secondary" style="background-color: #10b981; color: white; border: none;">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </a>
+                    </div>
+                    {% endfor %}
+                    {% if not archive_data %}
+                    <div class="glass"
+                        style="padding: 60px; border-radius: 24px; text-align: center; color: var(--text-secondary); border: 1px solid var(--border);">
+                        <i class="fas fa-folder-open" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                        <p>Belum ada arsip laporan.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+
+        </main>
+    </div>
+
+    <!-- Simple Payment Modal -->
+    <div id="payModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 450px; padding: 40px;">
+            <h2 style="font-weight: 800; margin-bottom: 20px;">Pembayaran</h2>
+            <div style="margin-bottom: 30px;">
+                <p style="color: var(--text-secondary); font-size: 14px;">TOTAL TAGIHAN</p>
+                <h1 id="modalTotalTxt" style="font-size: 40px; font-weight: 800; color: var(--accent);">Rp 0</h1>
+            </div>
+
+            <div class="input-group">
+                <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">METODE
+                    PEMBAYARAN</label>
+                <select id="payMethod" style="height: 55px;" onchange="updatePaymentMethod()">
+                    <option value="cash">TUNAI / CASH</option>
+                    <option value="qris">QRIS / TRANSFER</option>
+                </select>
+            </div>
+
+            <div class="input-group" id="bayarGroup">
+                <label
+                    style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">NOMINAL
+                    BAYAR</label>
+                <input type="text" id="inputBayar" placeholder="0" inputmode="numeric" pattern="[0-9]*"
+                    style="height: 55px; font-size: 20px; font-weight: 700;"
+                    oninput="formatBayarInput(); updateChange()">
+            </div>
+
+            <div id="paymentChangeInfo"
+                style="display: none; font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
+                <strong id="paymentChangeText">KEMBALIAN: Rp 0</strong>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+                <button class="btn btn-secondary"
+                    onclick="document.getElementById('payModal').style.display='none'">Batal</button>
+                <button class="btn btn-primary" onclick="prosesBayar()">Konfirmasi</button>
             </div>
         </div>
-    </main>
-</div>
-
-<!-- Simple Payment Modal -->
-<div id="payModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; z-index: 3000; padding: 40px; border-radius: 30px; box-shadow: var(--shadow-lg);">
-    <h2 style="font-weight: 800; margin-bottom: 20px;">Pembayaran</h2>
-    <div style="margin-bottom: 30px;">
-        <p style="color: var(--text-secondary); font-size: 14px;">TOTAL TAGIHAN</p>
-        <h1 id="modalTotalTxt" style="font-size: 40px; font-weight: 800; color: var(--accent);">Rp 0</h1>
-    </div>
-    
-    <div class="input-group">
-        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">METODE PEMBAYARAN</label>
-        <select id="payMethod" style="height: 55px;" onchange="updatePaymentMethod()">
-            <option value="cash">TUNAI / CASH</option>
-            <option value="qris">QRIS / TRANSFER</option>
-        </select>
     </div>
 
-    <div class="input-group" id="bayarGroup">
-        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">NOMINAL BAYAR</label>
-        <input type="text" id="inputBayar" placeholder="0" style="height: 55px; font-size: 20px; font-weight: 700;" oninput="formatBayarInput(); updateChange()">
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 400px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 15px;">Arsip Harian</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 30px;">Simpan semua transaksi hari ini ke Excel dan
+                bersihkan dashboard?</p>
+            <form action="/archive" method="POST">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('archiveModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background: #10b981;">Ya, Arsipkan</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div id="paymentChangeInfo" style="display: none; font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
-        <strong id="paymentChangeText">KEMBALIAN: Rp 0</strong>
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 440px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">Input Pengeluaran</h3>
+            <form action="/add_expense" method="POST">
+                <div class="input-group">
+                    <input type="text" name="keterangan" placeholder="Keterangan (contoh: Beli Es Batu)" required>
+                </div>
+                <div class="input-group">
+                    <input type="number" name="jumlah" placeholder="Nominal (contoh: 20000)" required>
+                </div>
+                <div class="input-group">
+                    <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">SUMBER DANA</label>
+                    <select name="source" style="height: 48px;">
+                        <option value="Kasir">Uang Kasir</option>
+                        <option value="Bank">Transfer Bank / E-Wallet</option>
+                        <option value="Dana Owner">Dana Owner</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addExpenseModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background: #ef4444;">Simpan</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
-        <button class="btn btn-secondary" onclick="document.getElementById('payModal').style.display='none'">Batal</button>
-        <button class="btn btn-primary" onclick="prosesBayar()">Konfirmasi</button>
+    <!-- Modal Tambah Bahan Baku -->
+    <div id="addMaterialModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 440px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">Tambah Bahan Baku</h3>
+            <form action="/add_material" method="POST">
+                <div class="input-group">
+                    <input type="text" name="nama" placeholder="Nama Bahan (contoh: Kopi)" required>
+                </div>
+                <div class="input-group">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">SATUAN</label>
+                    <select name="satuan" style="height: 48px;">
+                        <option value="gram">gram (gr)</option>
+                        <option value="ml">mililiter (ml)</option>
+                        <option value="pcs">pieces (pcs)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <input type="number" step="0.01" name="stok" placeholder="Stok Awal (contoh: 500)">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addMaterialModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- Archive Modal -->
-<div id="archiveModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; z-index: 3000; padding: 40px; border-radius: 30px;">
-    <h3 style="font-weight: 800; margin-bottom: 15px;">Arsip Harian</h3>
-    <p style="color: var(--text-secondary); margin-bottom: 30px;">Simpan semua transaksi hari ini ke Excel dan bersihkan dashboard?</p>
-    <form action="/archive" method="POST">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('archiveModal').style.display='none'">Batal</button>
-            <button type="submit" class="btn btn-primary" style="background: #10b981;">Ya, Arsipkan</button>
+    <!-- Modal Update Stok Bahan -->
+    <div id="updateMaterialModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 440px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 10px;">Update Stok</h3>
+            <p id="updateMaterialNameTxt" style="color: var(--accent); font-weight: 700; margin-bottom: 20px;"></p>
+            <form action="/update_material" method="POST">
+                <input type="hidden" name="id" id="updateMaterialId">
+                <input type="hidden" name="nama" id="updateMaterialNama">
+                <input type="hidden" name="satuan" id="updateMaterialSatuan">
+                <div class="input-group">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">TAMBAH
+                        STOK (+/-)</label>
+                    <input type="number" step="0.01" name="stok_tambah" placeholder="Contoh: 500 atau -50" required
+                        style="font-size: 18px; height: 52px;">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('updateMaterialModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary">Update Stok</button>
+                </div>
+            </form>
         </div>
-    </form>
-</div>
+    </div>
 
-<!-- Modal Tambah Resep -->
-<div id="addRecipeModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; z-index: 3000; padding: 40px; border-radius: 30px;">
-    <h3 style="font-weight: 800; margin-bottom: 20px;">Atur Resep Menu</h3>
-    <form action="/add_recipe" method="POST" id="recipeForm">
-        <div class="input-group">
-            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block;">PILIH MENU</label>
-            <select name="menu_id" required style="width: 100%; background: var(--bg-main); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary);">
-                {% for m in menus %}
-                <option value="{{ m.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{ m.nama }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div style="margin-top: 20px;">
-            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; display: block;">DAFTAR BAHAN BAKU</label>
-            <div id="recipeIngredientsList">
-                <!-- Rows will be added here -->
-            </div>
-            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 12px;" onclick="addRecipeIngredientRow()">
-                <i class="fas fa-plus"></i> Tambah Bahan
-            </button>
-        </div>
+    <!-- Modal Tambah Resep -->
+    <div id="addRecipeModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 500px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">Atur Resep Menu</h3>
+            <form action="/add_recipe" method="POST" id="recipeForm">
+                <div class="input-group">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block;">PILIH
+                        MENU</label>
+                    <select name="menu_id" required
+                        style="width: 100%; background: var(--bg-main); border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-primary);">
+                        {% for m in menus %}
+                        <option value="{{ m.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{
+                            m.nama }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-        <input type="hidden" name="recipe_json" id="recipeJsonInput">
+                <div style="margin-top: 20px;">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; display: block;">DAFTAR
+                        BAHAN BAKU</label>
+                    <div id="recipeIngredientsList">
+                        <!-- Rows will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary"
+                        style="width: 100%; margin-top: 10px; font-size: 12px;" onclick="addRecipeIngredientRow()">
+                        <i class="fas fa-plus"></i> Tambah Bahan
+                    </button>
+                </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addRecipeModal').style.display='none'">Batal</button>
-            <button type="submit" class="btn btn-primary">Simpan Resep</button>
-        </div>
-    </form>
-</div>
+                <input type="hidden" name="recipe_json" id="recipeJsonInput">
 
-<!-- Modal Tambah Menu -->
-<div id="addMenuModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; max-height: 90vh; overflow-y: auto; z-index: 3000; padding: 40px; border-radius: 30px;">
-    <h3 style="font-weight: 800; margin-bottom: 20px;">Tambah Menu Baru</h3>
-    <form id="addMenuForm" action="/add_menu" method="POST" enctype="multipart/form-data">
-        <div class="input-group">
-            <input type="text" name="nama" placeholder="Nama Menu" required>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addRecipeModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Resep</button>
+                </div>
+            </form>
         </div>
-        <div class="input-group">
-            <input type="number" name="harga" placeholder="Harga (Contoh: 15000)" required>
-        </div>
-        <div class="input-group">
-            <input type="number" name="diskon" placeholder="Diskon % (Contoh: 10)" value="0">
-        </div>
-        <div class="input-group">
-            <input type="text" name="kategori" placeholder="Kategori (Contoh: Minuman)" required>
-        </div>
-        <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_opt" value="1"> Minuman
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_note" value="1"> Catatan
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_variant" value="1" onchange="toggleVarContainer(this, 'add')"> Varian
-            </label>
-        </div>
-        <div id="addVarContainer" style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
-            <div id="addVarList"></div>
-            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="addVarRow('add')">
-                <i class="fas fa-plus"></i> Tambah Kategori Varian
-            </button>
-            <input type="hidden" name="variants_json" id="addVariantsJson" value="[]">
-        </div>
-        <div class="input-group">
-            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GAMBAR PRODUK</label>
-            <input type="file" name="gambar" accept="image/*">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('addMenuModal').style.display='none'">Batal</button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-        </div>
-    </form>
-</div>
+    </div>
 
-<!-- Modal Edit Menu -->
-<div id="editMenuModal" class="glass" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; max-height: 90vh; overflow-y: auto; z-index: 3000; padding: 40px; border-radius: 30px;">
-    <h3 style="font-weight: 800; margin-bottom: 20px;">Edit Menu</h3>
-    <form id="editMenuForm" action="/update_menu" method="POST" enctype="multipart/form-data">
-        <input type="hidden" name="id" id="editMenuId">
-        <div class="input-group">
-            <input type="text" name="nama" id="editMenuNama" required>
+    <!-- Modal Tambah Menu -->
+    <div id="addMenuModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 450px; max-height: 90vh; overflow-y: auto; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">Tambah Menu Baru</h3>
+            <form id="addMenuForm" action="/add_menu" method="POST" enctype="multipart/form-data">
+                <div class="input-group">
+                    <input type="text" name="nama" placeholder="Nama Menu" required>
+                </div>
+                <div class="input-group">
+                    <input type="number" name="harga" placeholder="Harga (Contoh: 15000)" required>
+                </div>
+                <div class="input-group">
+                    <input type="number" name="diskon" placeholder="Diskon % (Contoh: 10)" value="0">
+                </div>
+                <div class="input-group">
+                    <input type="text" name="kategori" placeholder="Kategori (Contoh: Minuman)" required>
+                </div>
+                <div class="input-group">
+                    <textarea name="deskripsi" placeholder="Deskripsi Menu (Opsional)" rows="2" style="width: 100%; border-radius: 12px; padding: 12px; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_opt" value="1"> Minuman
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_note" value="1"> Catatan
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_variant" value="1" onchange="toggleVarContainer(this, 'add')">
+                        Varian
+                    </label>
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent);">
+                        <input type="checkbox" name="show_on_tv" value="1" checked> 📺 Tampilkan di TV (Display Menu)
+                    </label>
+                </div>
+                <div id="addVarContainer"
+                    style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
+                    <div id="addVarList"></div>
+                    <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;"
+                        onclick="addVarRow('add')">
+                        <i class="fas fa-plus"></i> Tambah Kategori Varian
+                    </button>
+                    <input type="hidden" name="variants_json" id="addVariantsJson" value="[]">
+                </div>
+                <div class="input-group">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GAMBAR
+                        PRODUK</label>
+                    <input type="file" name="gambar" accept="image/*">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addMenuModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </form>
         </div>
-        <div class="input-group">
-            <input type="number" name="harga" id="editMenuHarga" required>
-        </div>
-        <div class="input-group">
-            <label style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; display: block;">DISKON (%)</label>
-            <input type="number" name="diskon" id="editMenuDiskon">
-        </div>
-        <div class="input-group">
-            <input type="text" name="kategori" id="editMenuKategori" required>
-        </div>
-        <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_opt" id="editMenuOpt" value="1"> Minuman
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_note" id="editMenuNote" value="1"> Catatan
-            </label>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                <input type="checkbox" name="has_variant" id="editMenuHasVar" value="1" onchange="toggleVarContainer(this, 'edit')"> Varian
-            </label>
-        </div>
-        
-        <div id="editVarContainer" style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
-            <div id="editVarList"></div>
-            <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="addVarRow('edit')">
-                <i class="fas fa-plus"></i> Tambah Kategori Varian
-            </button>
-            <input type="hidden" name="variants_json" id="editVariantsJson" value="[]">
-        </div>
-        <div class="input-group">
-            <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GANTI GAMBAR (OPSIONAL)</label>
-            <input type="file" name="gambar" accept="image/*">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('editMenuModal').style.display='none'">Batal</button>
-            <button type="submit" class="btn btn-primary">Update</button>
-        </div>
-    </form>
-</div>
+    </div>
 
-<script>
-    let currentOrderId = null;
-    let currentTotal = 0;
-    const html = document.documentElement;
+    <!-- Modal Edit Menu -->
+    <div id="editMenuModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 450px; max-height: 90vh; overflow-y: auto; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">Edit Menu</h3>
+            <form id="editMenuForm" action="/update_menu" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="id" id="editMenuId">
+                <div class="input-group">
+                    <input type="text" name="nama" id="editMenuNama" required>
+                </div>
+                <div class="input-group">
+                    <input type="number" name="harga" id="editMenuHarga" required>
+                </div>
+                <div class="input-group">
+                    <label
+                        style="font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; display: block;">DISKON
+                        (%)</label>
+                    <input type="number" name="diskon" id="editMenuDiskon">
+                </div>
+                <div class="input-group">
+                    <input type="text" name="kategori" id="editMenuKategori" required>
+                </div>
+                <div class="input-group">
+                    <textarea name="deskripsi" id="editMenuDeskripsi" placeholder="Deskripsi Menu (Opsional)" rows="2" style="width: 100%; border-radius: 12px; padding: 12px; background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); font-family: inherit; font-size: 14px; resize: vertical;"></textarea>
+                </div>
+                <div class="input-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_opt" id="editMenuOpt" value="1"> Minuman
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_note" id="editMenuNote" value="1"> Catatan
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" name="has_variant" id="editMenuHasVar" value="1"
+                            onchange="toggleVarContainer(this, 'edit')"> Varian
+                    </label>
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent);">
+                        <input type="checkbox" name="show_on_tv" id="editMenuShowOnTv" value="1"> 📺 Tampilkan di TV
+                        (Display Menu)
+                    </label>
+                </div>
 
-    function switchAdminTab(tab) {
-        const dashboard = document.getElementById('tabDashboard');
-        const menu = document.getElementById('tabMenu');
-        const recipe = document.getElementById('tabRecipe');
-        const navDash = document.getElementById('navDashboard');
-        const navMenu = document.getElementById('navMenu');
-        const navRecipe = document.getElementById('navRecipe');
+                <div id="editVarContainer"
+                    style="display: none; margin-bottom: 20px; border: 1px dashed var(--border); padding: 15px; border-radius: 15px;">
+                    <div id="editVarList"></div>
+                    <button type="button" class="btn btn-secondary" style="width: 100%; margin-top: 10px;"
+                        onclick="addVarRow('edit')">
+                        <i class="fas fa-plus"></i> Tambah Kategori Varian
+                    </button>
+                    <input type="hidden" name="variants_json" id="editVariantsJson" value="[]">
+                </div>
+                <div class="input-group">
+                    <label
+                        style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">GANTI
+                        GAMBAR (OPSIONAL)</label>
+                    <input type="file" name="gambar" accept="image/*">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('editMenuModal').style.display='none'">Batal</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        dashboard.style.display = 'none';
-        menu.style.display = 'none';
-        recipe.style.display = 'none';
-        navDash.classList.remove('active');
-        navMenu.classList.remove('active');
-        navRecipe.classList.remove('active');
+    <script>
+        let currentOrderId = null;
+        let currentTotal = 0;
+        const html = document.documentElement;
 
-        if (tab === 'dashboard') {
-            dashboard.style.display = 'block';
-            navDash.classList.add('active');
-        } else if (tab === 'menu') {
-            menu.style.display = 'block';
-            navMenu.classList.add('active');
-        } else {
-            recipe.style.display = 'block';
-            navRecipe.classList.add('active');
+        const _allTabs = ['Dashboard', 'Menu', 'Recipe', 'Settings', 'Inventory', 'Membership', 'Reports'];
+
+        function switchAdminTab(tab) {
+            // Hide all tab content
+            _allTabs.forEach(t => {
+                const el = document.getElementById('tab' + t);
+                if (el) el.style.display = 'none';
+                const nav = document.getElementById('nav' + t);
+                if (nav) nav.classList.remove('active');
+            });
+
+            // Show selected tab
+            const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            const navEl = document.getElementById('nav' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (tabEl) tabEl.style.display = 'block';
+            if (navEl) navEl.classList.add('active');
+
+            // Lazy init chart when reports tab is opened
+            if (tab === 'reports') initSalesChart();
+
+            // Persist active tab in URL hash without reload
+            history.replaceState(null, '', '#tab=' + tab);
         }
-    }
 
-    function toggleVarContainer(cb, mode) {
-        document.getElementById(mode + 'VarContainer').style.display = cb.checked ? 'block' : 'none';
-        if (cb.checked && document.getElementById(mode + 'VarList').children.length === 0) {
-            addVarRow(mode);
+        // ── Sales Chart (lazy, destroyable) ────────────────────────
+        let _salesChartInstance = null;
+        function initSalesChart() {
+            try {
+                const canvas = document.getElementById('salesChart');
+                if (!canvas) return;
+                // Destroy old chart if exists
+                if (_salesChartInstance) {
+                    _salesChartInstance.destroy();
+                    _salesChartInstance = null;
+                }
+                const ctx = canvas.getContext('2d');
+                const rawLabels = {{ chart_labels | tojson | safe }};
+                const rawData = {{ chart_data | tojson | safe }};
+                // Shorten labels to DD/MM for readability
+                const shortLabels = rawLabels.map(l => l.slice(0,5));
+                _salesChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: shortLabels,
+                        datasets: [{
+                            label: 'Penjualan (Rp)',
+                            data: rawData,
+                            borderColor: '#eab308',
+                            backgroundColor: 'rgba(234,179,8,0.08)',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#eab308',
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        animation: { duration: 600 },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => 'Rp ' + ctx.parsed.y.toLocaleString('id-ID')
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: {
+                                    color: 'rgba(255,255,255,0.5)',
+                                    callback: val => 'Rp ' + (val >= 1000000 ? (val/1000000).toFixed(1)+'jt' : val >= 1000 ? (val/1000).toFixed(0)+'rb' : val)
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: 'rgba(255,255,255,0.5)', maxTicksLimit: 10 }
+                            }
+                        }
+                    }
+                });
+            } catch (e) { console.error('Chart error:', e); }
         }
-    }
 
-    function addVarRow(mode, title = '', options = '') {
-        const list = document.getElementById(mode + 'VarList');
-        const div = document.createElement('div');
-        div.className = 'variant-row';
-        div.style.marginBottom = '15px';
-        div.style.padding = '15px';
-        div.style.background = 'rgba(0,0,0,0.2)';
-        div.style.borderRadius = '10px';
-        
-        // Parse options - bisa dari format lama (string) atau format baru (array)
-        let optionsArray = [];
-        if (typeof options === 'string') {
-            // Format lama: "Single, Double"
-            optionsArray = options.split(',').map(o => ({ name: o.trim(), price: 0 }));
-        } else if (Array.isArray(options)) {
-            // Format baru: [{name: "Single", price: 0}]
-            optionsArray = options;
-        } else if (options.list) {
-            // Format mix
-            const items = typeof options.list === 'string' ? options.list.split(',') : options.list;
-            optionsArray = items.map(o => ({ name: o.trim(), price: 0 }));
+        // ── Inventory helpers ──────────────────────────────────────
+        function openUpdateMaterialModal(id, nama, satuan) {
+            document.getElementById('updateMaterialId').value = id;
+            document.getElementById('updateMaterialNama').value = nama;
+            document.getElementById('updateMaterialSatuan').value = satuan;
+            document.getElementById('updateMaterialNameTxt').innerText = nama;
+            document.getElementById('updateMaterialModal').style.display = 'block';
         }
-        
-        const isMultiple = options.is_multiple || false;
-        
-        div.innerHTML = `
+
+        // ── Membership helpers ──────────────────────────────────────
+        function deleteMemberSPA(memberId, memberName) {
+            if (confirm(`Apakah yakin menghapus member ${memberName}?`)) {
+                fetch(`/delete_member/${memberId}`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            alert('Member berhasil dihapus');
+                            location.reload();
+                        } else {
+                            alert('Gagal menghapus member: ' + (d.message || ''));
+                        }
+                    })
+                    .catch(() => { location.reload(); });
+            }
+        }
+
+        // ── Tab restore from URL hash on page load ──────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            const match = hash.match(/^#tab=(\w+)$/);
+            if (match) {
+                switchAdminTab(match[1]);
+            } else {
+                // Check query param fallback (?tab=xxx from Flask redirect)
+                const urlTab = new URLSearchParams(window.location.search).get('tab');
+                if (urlTab) switchAdminTab(urlTab);
+            }
+        });
+
+        function toggleVarContainer(cb, mode) {
+            document.getElementById(mode + 'VarContainer').style.display = cb.checked ? 'block' : 'none';
+            if (cb.checked && document.getElementById(mode + 'VarList').children.length === 0) {
+                addVarRow(mode);
+            }
+        }
+
+        function addVarRow(mode, title = '', options = '') {
+            const list = document.getElementById(mode + 'VarList');
+            const div = document.createElement('div');
+            div.className = 'variant-row';
+            div.style.marginBottom = '15px';
+            div.style.padding = '15px';
+            div.style.background = 'rgba(0,0,0,0.2)';
+            div.style.borderRadius = '10px';
+
+            // Parse options - bisa dari format lama (string) atau format baru (array)
+            let optionsArray = [];
+            if (typeof options === 'string') {
+                // Format lama: "Single, Double"
+                optionsArray = options.split(',').map(o => ({ name: o.trim(), price: 0 }));
+            } else if (Array.isArray(options)) {
+                // Format baru: [{name: "Single", price: 0}]
+                optionsArray = options;
+            } else if (options.list) {
+                // Format mix
+                const items = typeof options.list === 'string' ? options.list.split(',') : options.list;
+                optionsArray = items.map(o => {
+                    if (typeof o === 'string') return { name: o.trim(), price: 0 };
+                    return { name: (o.name || '').trim(), price: o.price || 0 };
+                });
+            }
+
+            const isMultiple = options.is_multiple || false;
+
+            div.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <input type="text" placeholder="Judul (Contoh: Porsi)" value="${title}" class="v-title" style="margin: 0; flex-grow: 1; margin-right: 10px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary);">
                 <label style="font-size: 10px; display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-right: 10px;">
@@ -491,16 +1385,16 @@
                 <i class="fas fa-plus"></i> Tambah Opsi
             </button>
         `;
-        
-        const optionsList = div.querySelector('.v-options-list');
-        optionsArray.forEach(opt => {
-            const optDiv = document.createElement('div');
-            optDiv.className = 'option-item';
-            optDiv.style.display = 'grid';
-            optDiv.style.gridTemplateColumns = '1fr 120px 30px';
-            optDiv.style.gap = '8px';
-            optDiv.style.alignItems = 'center';
-            optDiv.innerHTML = `
+
+            const optionsList = div.querySelector('.v-options-list');
+            optionsArray.forEach(opt => {
+                const optDiv = document.createElement('div');
+                optDiv.className = 'option-item';
+                optDiv.style.display = 'grid';
+                optDiv.style.gridTemplateColumns = '1fr 120px 30px';
+                optDiv.style.gap = '8px';
+                optDiv.style.alignItems = 'center';
+                optDiv.innerHTML = `
                 <input type="text" placeholder="Nama Opsi (Contoh: Single)" value="${opt.name}" class="opt-name" style="margin: 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px;">
                 <div style="display: flex; align-items: center; gap: 4px;">
                     <span style="font-size: 10px; color: var(--text-secondary);">+Rp</span>
@@ -508,21 +1402,21 @@
                 </div>
                 <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash"></i></button>
             `;
-            optionsList.appendChild(optDiv);
-        });
-        
-        list.appendChild(div);
-    }
+                optionsList.appendChild(optDiv);
+            });
 
-    function addOptionPrice(button) {
-        const optionsList = button.previousElementSibling;
-        const optDiv = document.createElement('div');
-        optDiv.className = 'option-item';
-        optDiv.style.display = 'grid';
-        optDiv.style.gridTemplateColumns = '1fr 120px 30px';
-        optDiv.style.gap = '8px';
-        optDiv.style.alignItems = 'center';
-        optDiv.innerHTML = `
+            list.appendChild(div);
+        }
+
+        function addOptionPrice(button) {
+            const optionsList = button.previousElementSibling;
+            const optDiv = document.createElement('div');
+            optDiv.className = 'option-item';
+            optDiv.style.display = 'grid';
+            optDiv.style.gridTemplateColumns = '1fr 120px 30px';
+            optDiv.style.gap = '8px';
+            optDiv.style.alignItems = 'center';
+            optDiv.innerHTML = `
             <input type="text" placeholder="Nama Opsi (Contoh: Double)" class="opt-name" style="margin: 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-primary); font-size: 12px;">
             <div style="display: flex; align-items: center; gap: 4px;">
                 <span style="font-size: 10px; color: var(--text-secondary);">+Rp</span>
@@ -530,24 +1424,24 @@
             </div>
             <button type="button" onclick="this.parentElement.remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-trash"></i></button>
         `;
-        optionsList.appendChild(optDiv);
-    }
+            optionsList.appendChild(optDiv);
+        }
 
-    function addRecipeIngredientRow() {
-        const list = document.getElementById('recipeIngredientsList');
-        const div = document.createElement('div');
-        div.className = 'ingredient-row';
-        div.style.display = 'grid';
-        div.style.gridTemplateColumns = '1fr 100px 40px';
-        div.style.gap = '10px';
-        div.style.marginBottom = '10px';
-        
-        let materialOptions = '';
-        {% for mat in materials %}
-        materialOptions += `<option value="{{ mat.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{ mat.nama }} ({{ mat.satuan }})</option>`;
-        {% endfor %}
-        
-        div.innerHTML = `
+        function addRecipeIngredientRow() {
+            const list = document.getElementById('recipeIngredientsList');
+            const div = document.createElement('div');
+            div.className = 'ingredient-row';
+            div.style.display = 'grid';
+            div.style.gridTemplateColumns = '1fr 100px 40px';
+            div.style.gap = '10px';
+            div.style.marginBottom = '10px';
+
+            let materialOptions = '';
+            {% for mat in materials %}
+            materialOptions += `<option value="{{ mat.id }}" style="background: var(--bg-main); color: var(--text-primary);">{{ mat.nama }} ({{ mat.satuan }})</option>`;
+            {% endfor %}
+
+            div.innerHTML = `
             <select class="ing-id" required style="background: var(--bg-main); border: 1px solid var(--border); padding: 8px; border-radius: 8px; color: var(--text-primary); font-size: 13px;">
                 ${materialOptions}
             </select>
@@ -556,263 +1450,826 @@
                 <i class="fas fa-trash"></i>
             </button>
         `;
-        list.appendChild(div);
-    }
-
-    document.getElementById('recipeForm').addEventListener('submit', function(e) {
-        const rows = document.querySelectorAll('.ingredient-row');
-        let ingredients = [];
-        rows.forEach(row => {
-            const matId = row.querySelector('.ing-id').value;
-            const qty = row.querySelector('.ing-qty').value;
-            if (matId && qty) ingredients.push({ matId, qty });
-        });
-        
-        if (ingredients.length === 0) {
-            alert("Tambahkan setidaknya satu bahan!");
-            e.preventDefault();
-            return;
+            list.appendChild(div);
         }
-        
-        document.getElementById('recipeJsonInput').value = JSON.stringify(ingredients);
-    });
 
-    // Add first row automatically
-    addRecipeIngredientRow();
+        document.getElementById('recipeForm').addEventListener('submit', function (e) {
+            const rows = document.querySelectorAll('.ingredient-row');
+            let ingredients = [];
+            rows.forEach(row => {
+                const matId = row.querySelector('.ing-id').value;
+                const qty = row.querySelector('.ing-qty').value;
+                if (matId && qty) ingredients.push({ matId, qty });
+            });
 
-    function collectVariants(mode) {
-        const rows = document.getElementById(mode + 'VarList').querySelectorAll('.variant-row');
-        let variants = [];
-        rows.forEach(row => {
-            const title = row.querySelector('.v-title').value.trim();
-            const is_multiple = row.querySelector('.v-multiple').checked;
-            
-            // Kumpulkan semua opsi dengan harga mereka
-            const optionItems = row.querySelectorAll('.option-item');
-            const options = [];
-            optionItems.forEach(item => {
-                const name = item.querySelector('.opt-name').value.trim();
-                const price = parseInt(item.querySelector('.opt-price').value || 0);
-                if (name) {
-                    options.push({ name, price });
+            if (ingredients.length === 0) {
+                alert("Tambahkan setidaknya satu bahan!");
+                e.preventDefault();
+                return;
+            }
+
+            document.getElementById('recipeJsonInput').value = JSON.stringify(ingredients);
+        });
+
+        // Add first row automatically
+        addRecipeIngredientRow();
+
+        function collectVariants(mode) {
+            const rows = document.getElementById(mode + 'VarList').querySelectorAll('.variant-row');
+            let variants = [];
+            rows.forEach(row => {
+                const title = row.querySelector('.v-title').value.trim();
+                const is_multiple = row.querySelector('.v-multiple').checked;
+
+                // Kumpulkan semua opsi dengan harga mereka
+                const optionItems = row.querySelectorAll('.option-item');
+                const options = [];
+                optionItems.forEach(item => {
+                    const name = item.querySelector('.opt-name').value.trim();
+                    const price = parseInt(item.querySelector('.opt-price').value || 0);
+                    if (name) {
+                        options.push({ name, price });
+                    }
+                });
+
+                if (title && options.length > 0) {
+                    variants.push({ title, options, is_multiple });
                 }
             });
-            
-            if (title && options.length > 0) {
-                variants.push({ title, options, is_multiple });
+            document.getElementById(mode + 'VariantsJson').value = JSON.stringify(variants);
+        }
+
+        // Attach collector to forms
+        document.getElementById('addMenuForm').addEventListener('submit', function () {
+            if (document.getElementById('addVarContainer').style.display !== 'none') {
+                collectVariants('add');
             }
         });
-        document.getElementById(mode + 'VariantsJson').value = JSON.stringify(variants);
-    }
 
-    // Attach collector to forms
-    document.getElementById('addMenuForm').addEventListener('submit', function() {
-        if (document.getElementById('addVarContainer').style.display !== 'none') {
-            collectVariants('add');
+        document.getElementById('editMenuForm').addEventListener('submit', function () {
+            if (document.getElementById('editVarContainer').style.display !== 'none') {
+                collectVariants('edit');
+            }
+        });
+
+        function openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants, show_on_tv, deskripsi) {
+            document.getElementById('editMenuId').value = id;
+            document.getElementById('editMenuNama').value = nama;
+            document.getElementById('editMenuHarga').value = harga;
+            document.getElementById('editMenuKategori').value = kategori;
+            document.getElementById('editMenuDeskripsi').value = deskripsi || '';
+            document.getElementById('editMenuOpt').checked = (has_opt === '1' || has_opt === 1);
+            document.getElementById('editMenuNote').checked = (has_note === '1' || has_note === 1);
+            document.getElementById('editMenuShowOnTv').checked = (show_on_tv === '1' || show_on_tv === 1 || show_on_tv === true);
+
+            const hasVar = (has_variant === '1' || has_variant === 1);
+            document.getElementById('editMenuHasVar').checked = hasVar;
+            document.getElementById('editVarContainer').style.display = hasVar ? 'block' : 'none';
+
+            const list = document.getElementById('editVarList');
+            list.innerHTML = '';
+            if (variants && variants.length > 0) {
+                variants.forEach(v => {
+                    // Kompatibel dengan format lama dan baru
+                    let optionsData = v.options;
+                    if (typeof v.options === 'string') {
+                        // Format lama: string
+                        optionsData = v.options;
+                    } else if (Array.isArray(v.options)) {
+                        // Format baru: array of {name, price}
+                        optionsData = v.options;
+                    }
+                    addVarRow('edit', v.title, { list: optionsData, is_multiple: v.is_multiple });
+                });
+            }
+
+            document.getElementById('editMenuDiskon').value = diskon || 0;
+            document.getElementById('editMenuModal').style.display = 'block';
         }
-    });
 
-    document.getElementById('editMenuForm').addEventListener('submit', function() {
-        if (document.getElementById('editVarContainer').style.display !== 'none') {
-            collectVariants('edit');
-        }
-    });
-
-    function openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants) {
-        document.getElementById('editMenuId').value = id;
-        document.getElementById('editMenuNama').value = nama;
-        document.getElementById('editMenuHarga').value = harga;
-        document.getElementById('editMenuKategori').value = kategori;
-        document.getElementById('editMenuOpt').checked = (has_opt === '1' || has_opt === 1);
-        document.getElementById('editMenuNote').checked = (has_note === '1' || has_note === 1);
-        
-        const hasVar = (has_variant === '1' || has_variant === 1);
-        document.getElementById('editMenuHasVar').checked = hasVar;
-        document.getElementById('editVarContainer').style.display = hasVar ? 'block' : 'none';
-        
-        const list = document.getElementById('editVarList');
-        list.innerHTML = '';
-        if (variants && variants.length > 0) {
-            variants.forEach(v => {
-                // Kompatibel dengan format lama dan baru
-                let optionsData = v.options;
-                if (typeof v.options === 'string') {
-                    // Format lama: string
-                    optionsData = v.options;
-                } else if (Array.isArray(v.options)) {
-                    // Format baru: array of {name, price}
-                    optionsData = v.options;
-                }
-                addVarRow('edit', v.title, { list: optionsData, is_multiple: v.is_multiple });
+        let voices = [];
+        function loadVoices() {
+            voices = window.speechSynthesis.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, i) => {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.lang.includes('id')) option.selected = true;
+                voiceSelect.appendChild(option);
             });
         }
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
 
-        document.getElementById('editMenuDiskon').value = diskon || 0;
-        document.getElementById('editMenuModal').style.display = 'block';
-    }
+        // Helper function to unescape HTML entities
+        function unescapeHtml(text) {
+            const map = {
+                '&amp;': '&',
+                '&lt;': '<',
+                '&gt;': '>',
+                '&quot;': '"',
+                '&#039;': "'"
+            };
+            return text.replace(/&amp;|&lt;|&gt;|&quot;|&#039;/g, m => map[m]);
+        }
 
-    let voices = [];
-    function loadVoices() {
-        voices = window.speechSynthesis.getVoices();
-        const voiceSelect = document.getElementById('voiceSelect');
-        voiceSelect.innerHTML = '';
-        voices.forEach((voice, i) => {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = `${voice.name} (${voice.lang})`;
-            if (voice.lang.includes('id')) option.selected = true;
-            voiceSelect.appendChild(option);
-        });
-    }
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
-
-    // Helper function to unescape HTML entities
-    function unescapeHtml(text) {
-        const map = {
-            '&amp;': '&',
-            '&lt;': '<',
-            '&gt;': '>',
-            '&quot;': '"',
-            '&#039;': "'"
-        };
-        return text.replace(/&amp;|&lt;|&gt;|&quot;|&#039;/g, m => map[m]);
-    }
-
-    // Event listener untuk button Edit
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            try {
-                const id = this.getAttribute('data-id');
-                const nama = unescapeHtml(this.getAttribute('data-nama') || '');
-                const harga = this.getAttribute('data-harga');
-                const kategori = unescapeHtml(this.getAttribute('data-kategori') || '');
-                const has_opt = this.getAttribute('data-has-opt');
-                const diskon = this.getAttribute('data-diskon');
-                const has_note = this.getAttribute('data-has-note');
-                const has_variant = this.getAttribute('data-has-variant');
-                let variants = [];
-                
-                const variantsStr = this.getAttribute('data-variants') || '[]';
+        // Event listener untuk button Edit
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
                 try {
-                    variants = JSON.parse(variantsStr);
-                } catch (parseError) {
-                    console.error('Error parsing variants:', parseError, 'String:', variantsStr);
-                    variants = [];
+                    const id = this.getAttribute('data-id');
+                    const nama = unescapeHtml(this.getAttribute('data-nama') || '');
+                    const harga = this.getAttribute('data-harga');
+                    const kategori = unescapeHtml(this.getAttribute('data-kategori') || '');
+                    const has_opt = this.getAttribute('data-has-opt');
+                    const diskon = this.getAttribute('data-diskon');
+                    const has_note = this.getAttribute('data-has-note');
+                    const has_variant = this.getAttribute('data-has-variant');
+                    const show_on_tv = this.getAttribute('data-show-on-tv');
+                    const deskripsi = unescapeHtml(this.getAttribute('data-deskripsi') || '');
+                    let variants = [];
+
+                    const variantsStr = this.getAttribute('data-variants') || '[]';
+                    try {
+                        variants = JSON.parse(variantsStr);
+                    } catch (parseError) {
+                        console.error('Error parsing variants:', parseError, 'String:', variantsStr);
+                        variants = [];
+                    }
+
+                    openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants, show_on_tv, deskripsi);
+                } catch (error) {
+                    console.error('Error in edit button:', error);
+                    alert('Ada error saat membuka edit menu. Silakan refresh halaman dan coba lagi.');
                 }
-                
-                openEditMenu(id, nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants);
-            } catch (error) {
-                console.error('Error in edit button:', error);
-                alert('Ada error saat membuka edit menu. Silakan refresh halaman dan coba lagi.');
+            });
+        });
+
+        function panggilPesanan(nomor, nama, orderId) {
+            const teks = `Nomor antrian ${nomor}. Silakan ambil pesanan Anda.`;
+            const speech = new SpeechSynthesisUtterance(teks);
+            const selectedVoiceIndex = document.getElementById('voiceSelect').value;
+            if (voices[selectedVoiceIndex]) {
+                speech.voice = voices[selectedVoiceIndex];
+            }
+            speech.lang = 'id-ID';
+            speech.rate = 0.9;
+
+            // Simpan referensi ke window untuk menghindari bug garbage collection di browser Chromium
+            window.activeSpeech = speech;
+
+            // 1. Setup event listener secara synchronous
+            speech.onend = () => {
+                console.log('Speech calling finished');
+            };
+            speech.onerror = (e) => {
+                console.error('Speech error:', e);
+            };
+
+            // 2. Kirim API call & trigger update dashboard
+            if (orderId) {
+                fetch('/call/' + orderId, {
+                    method: 'POST'
+                }).then(response => {
+                    // Refresh dashboard segera setelah status diubah di server
+                    fetchAndUpdateOrders();
+                }).catch(err => {
+                    console.error('Error updating queue status:', err);
+                });
+            }
+            // 3. Mulai bersuara
+            window.speechSynthesis.speak(speech);
+        }
+
+        function toggleTheme() {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            document.querySelectorAll('.theme-icon').forEach(el => {
+                el.className = newTheme === 'dark' ? 'fas fa-sun theme-icon' : 'fas fa-moon theme-icon';
+            });
+            document.querySelectorAll('.theme-text').forEach(el => {
+                el.innerText = newTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
+            });
+            localStorage.setItem('theme', newTheme);
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        document.querySelectorAll('.theme-icon').forEach(el => {
+            el.className = savedTheme === 'dark' ? 'fas fa-sun theme-icon' : 'fas fa-moon theme-icon';
+        });
+        document.querySelectorAll('.theme-text').forEach(el => {
+            el.innerText = savedTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
+        });
+
+        function openPayment(id, total, meja) {
+            currentOrderId = id;
+            currentTotal = parseInt(total);
+            currentMeja = meja;
+            document.getElementById('modalTotalTxt').innerText = "Rp " + currentTotal.toLocaleString('id-ID').replace(/,/g, '.');
+            document.getElementById('payMethod').value = 'cash';
+            document.getElementById('inputBayar').value = '';
+            updatePaymentMethod();
+            document.getElementById('payModal').style.display = 'block';
+            // Focus on nominal input after small delay
+            if (document.getElementById('payMethod').value === 'cash') {
+                setTimeout(() => document.getElementById('inputBayar').focus(), 200);
+            }
+        }
+
+        function updatePaymentMethod() {
+            const method = document.getElementById('payMethod').value;
+            const bayarGroup = document.getElementById('bayarGroup');
+            const changeInfo = document.getElementById('paymentChangeInfo');
+            if (method === 'cash') {
+                bayarGroup.style.display = 'block';
+                changeInfo.style.display = 'block';
+                updateChange();
+            } else {
+                bayarGroup.style.display = 'none';
+                changeInfo.style.display = 'none';
+                document.getElementById('inputBayar').value = '';
+            }
+        }
+
+        function formatRupiah(value) {
+            return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+
+        function getBayarValue() {
+            const raw = document.getElementById('inputBayar').value.replace(/\D/g, '');
+            return raw ? parseInt(raw, 10) : 0;
+        }
+
+        function formatBayarInput() {
+            const input = document.getElementById('inputBayar');
+            const raw = input.value.replace(/\D/g, '');
+            if (!raw) {
+                input.value = '';
+                return;
+            }
+            input.value = formatRupiah(raw);
+        }
+
+        function updateChange() {
+            const bayarValue = getBayarValue();
+            const change = bayarValue - currentTotal;
+            const formatted = "Rp " + Math.abs(change).toLocaleString('id-ID').replace(/,/g, '.');
+            const text = change >= 0 ? `KEMBALIAN: ${formatted}` : `KURANG: ${formatted}`;
+            document.getElementById('paymentChangeText').innerText = text;
+        }
+
+        async function prosesBayar() {
+            const method = document.getElementById('payMethod').value;
+            const bayar = method === 'cash'
+                ? (getBayarValue() || currentTotal)
+                : currentTotal;
+
+            const confirmBtn = document.querySelector('#payModal .btn-primary');
+
+            confirmBtn.disabled = true;
+            confirmBtn.innerText = '⏳ Memproses...';
+
+            const kasirName = document.getElementById('globalKasirName').value.trim() || 'Admin';
+
+            try {
+
+                const payResp = await fetch(`/pay/${currentOrderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        kasir: kasirName,
+                        bayar,
+                        metode: method,
+                        total_akhir: currentTotal
+                    })
+                });
+
+                if (!payResp.ok && !payResp.redirected) {
+                    throw new Error('Pembayaran gagal di server.');
+                }
+
+                try {
+                    const orderResp = await fetch(`/api/order/${currentOrderId}`);
+                    const order = await orderResp.json();
+
+                    confirmBtn.innerText = '🖨️ Mencetak...';
+
+                    await printReceiptViaBluetooth(
+                        order,
+                        bayar,
+                        method
+                    );
+
+                } catch (printErr) {
+
+                    console.warn(
+                        'Print error:',
+                        printErr
+                    );
+
+                    alert(
+                        'Pembayaran berhasil tetapi printer gagal mencetak.'
+                    );
+                }
+
+                document.getElementById('payModal').style.display = 'none';
+
+                const card = document.querySelector(
+                    `[data-order-id="${currentOrderId}"]`
+                );
+
+                if (card) {
+                    // Update visual status temporarily before polling catches up
+                    card.style.borderLeftColor = '#3b82f6';
+                    card.setAttribute('data-status', 'pending');
+                }
+
+            } catch (err) {
+
+                console.error(err);
+
+                alert(
+                    'Terjadi kesalahan: ' +
+                    err.message
+                );
+
+            } finally {
+
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = 'Konfirmasi';
+            }
+        }
+
+        function submitPaymentForm(method, bayar) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/pay/${currentOrderId}`;
+            const fields = { kasir: 'Admin', bayar, metode: method, total_akhir: currentTotal };
+            for (const [key, value] of Object.entries(fields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden'; input.name = key; input.value = value;
+                form.appendChild(input);
+            }
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        window.onload = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab');
+
+            if (tab === 'menu') switchAdminTab('menu');
+            if (tab === 'recipe') switchAdminTab('recipe');
+            if (tab === 'settings') switchAdminTab('settings');
+
+            // autoReconnectBluetooth(); // sudah tidak digunakan
+
+            setInterval(fetchAndUpdateOrders, 500);
+        };
+
+        // ── DIAMBIL tanpa reload halaman ────────────────────────────
+        async function finishOrder(orderId, btn) {
+            btn.disabled = true;
+            btn.innerText = '...';
+            try {
+                await fetch(`/finish/${orderId}`, { method: 'POST', redirect: 'follow' });
+                const card = document.querySelector(`[data-order-id="${orderId}"]`);
+                if (card) {
+                    card.style.transition = 'opacity 0.4s, transform 0.4s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 400);
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerText = 'DIAMBIL';
+            }
+        }
+
+        // ── Live Order Polling ──────────────────────────────────────
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function fmtRp(n) { return Number(n).toLocaleString('id-ID').replace(/,/g, '.'); }
+        function renderOrderCard(o) {
+            const color = o.status === 'belum_bayar' ? '#f59e0b' :
+                o.status === 'pending' ? '#3b82f6' :
+                    o.status === 'siap' ? '#8b5cf6' : '#10b981';
+
+            let badgeHtml = '';
+            if (o.status === 'belum_bayar') {
+                badgeHtml = `<span style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">BELUM BAYAR</span>`;
+            } else if (o.status === 'pending') {
+                badgeHtml = `<span style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">DIPROSES</span>`;
+            } else if (o.status === 'siap') {
+                badgeHtml = `<span style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">SIAP DIAMBIL</span>`;
+            } else {
+                badgeHtml = `<span style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;">SELESAI</span>`;
+            }
+
+            const items = (o.menu || '').split('|').map(i =>
+                `<p style="font-weight:600;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px;"><i class="fas fa-dot-circle" style="color:var(--accent);font-size:8px;"></i> ${escHtml(i.trim())}</p>`
+            ).join('');
+
+            const callClr = o.status === 'pending' ? '#3b82f6' : '#8b5cf6';
+            const shadowClr = o.status === 'pending' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(139, 92, 246, 0.2)';
+
+            let btns = '';
+            if (o.status === 'belum_bayar') {
+                btns = `<button class="btn btn-primary" style="background:#f59e0b;color:#000;box-shadow:0 4px 12px rgba(245,158,11,0.2);" onclick="openPayment('${o.id}','${o.total}','${o.meja}')"><i class="fas fa-wallet"></i> BAYAR</button>`;
+            } else if (o.status === 'pending' || o.status === 'siap') {
+                btns = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button class="btn btn-secondary" style="background:${callClr};color:white;border:none;box-shadow:0 4px 12px ${shadowClr};" onclick="panggilPesanan('${o.meja}','${escHtml(o.pelanggan)}','${o.id}')">
+                    <i class="fas fa-volume-up"></i> PANGGIL</button>
+                <button class="btn btn-secondary" style="background:#4b5563;color:white;border:none;" onclick="printBaristaStruk('${o.id}')">
+                    <i class="fas fa-print"></i> STRUK BARISTA</button>
+                <button class="btn btn-primary" style="background:#10b981;color:white;border:none;box-shadow:0 4px 12px rgba(16, 185, 129, 0.2);" onclick="finishOrder('${o.id}',this)">
+                    <i class="fas fa-check"></i> DIAMBIL</button>
+            </div>`;
+            }
+
+            return `<div class="order-item glass" data-order-id="${o.id}" data-status="${o.status}"
+            style="border-left:6px solid ${color}; padding:24px; border-radius:20px;">
+            <div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+                    <span style="background:rgba(234,179,8,0.15);color:var(--accent);border:1px solid rgba(234,179,8,0.3);padding:4px 12px;border-radius:8px;font-weight:800;font-size:13px;letter-spacing:0.5px;">A-${o.meja}</span>
+                    <span style="font-weight:700;font-size:16px;color:var(--text-primary);">${escHtml(o.pelanggan)}</span>
+                    ${badgeHtml}
+                </div>
+                <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;padding-left:2px;">${items}</div>
+                <p style="font-size:11px;color:var(--text-secondary);margin-top:15px;display:flex;align-items:center;gap:5px;"><i class="far fa-clock"></i> ${escHtml(o.waktu)}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:25px;flex-wrap:wrap;">
+                <div style="text-align:right;">
+                    <p style="font-size:11px;color:var(--text-secondary);font-weight:700;letter-spacing:0.5px;">TOTAL TAGIHAN</p>
+                    <p style="font-weight:800;font-size:22px;color:var(--accent);margin-top:2px;">Rp ${fmtRp(o.total)}</p>
+                </div>
+                ${btns}
+            </div>
+        </div>`;
+        }
+        let _lastHash = '';
+        async function fetchAndUpdateOrders() {
+            try {
+                const resp = await fetch('/api/orders_dashboard');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const orders = data.orders || [];
+
+                // Hash cepat untuk skip jika tidak ada perubahan
+                const hash = orders.map(o => o.id + ':' + o.status).join(',');
+                if (hash === _lastHash) return;
+                _lastHash = hash;
+
+                // Update counters
+                const bb = orders.filter(o => o.status === 'belum_bayar').length;
+                const pp = orders.filter(o => o.status === 'pending' || o.status === 'siap').length;
+                const el = id => document.getElementById(id);
+                if (el('statBelumBayar')) el('statBelumBayar').textContent = bb;
+                if (el('statPending')) el('statPending').textContent = pp;
+                if (el('statSelesai')) el('statSelesai').textContent = data.selesai_count || 0;
+
+                const container = document.querySelector('.order-list');
+                if (!container) return;
+
+                const inIds = new Set(orders.map(o => String(o.id)));
+
+                // Hapus kartu yang tidak ada lagi di server
+                container.querySelectorAll('[data-order-id]').forEach(card => {
+                    if (!inIds.has(card.getAttribute('data-order-id')) && card.style.opacity !== '0') {
+                        card.style.transition = 'opacity 0.4s, transform 0.4s';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(() => card.remove(), 400);
+                    }
+                });
+
+                // Tambah/update kartu
+                orders.forEach(o => {
+                    const id = String(o.id);
+                    const existing = container.querySelector(`[data-order-id="${id}"]`);
+                    if (!existing) {
+                        // Pesanan baru — masukkan di atas dengan animasi
+                        const tmp = document.createElement('div');
+                        tmp.innerHTML = renderOrderCard(o).trim();
+                        const newCard = tmp.firstElementChild;
+                        newCard.style.opacity = '0';
+                        newCard.style.transform = 'translateY(-10px)';
+                        newCard.style.transition = 'opacity 0.4s, transform 0.4s';
+                        container.prepend(newCard);
+                        setTimeout(() => {
+                            newCard.style.opacity = '1';
+                            newCard.style.transform = 'translateY(0)';
+                        }, 20);
+                    } else if (existing.getAttribute('data-status') !== o.status) {
+                        // Status berubah — ganti seluruh kartu
+                        const tmp = document.createElement('div');
+                        tmp.innerHTML = renderOrderCard(o).trim();
+                        existing.replaceWith(tmp.firstElementChild);
+                    }
+                });
+            } catch (e) {
+                // Gagal fetch — abaikan, coba lagi nanti
+            }
+        }
+
+        // Load initial bluetooth settings
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.printer_mac) {
+                    const sel = document.getElementById('btMacSelect');
+                    sel.innerHTML = `<option value="${data.printer_mac}">${data.printer_mac} (Tersimpan)</option>`;
+                }
+            } catch (e) { }
+        });
+
+        async function scanBluetoothPrinters() {
+            const btn = document.getElementById('btScanBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/scan_printers');
+                const data = await res.json();
+                const sel = document.getElementById('btMacSelect');
+                sel.innerHTML = '<option value="">-- Pilih Printer --</option>';
+                data.printers.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.mac;
+                    opt.textContent = `${p.name} (${p.mac})`;
+                    sel.appendChild(opt);
+                });
+                if (data.printers.length === 0) {
+                    alert('Tidak menemukan port Bluetooth di server. Pastikan printer sudah dipairing di Windows.');
+                }
+            } catch (e) {
+                alert('Gagal scan printer: ' + e);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-search"></i> Scan Printer';
+                btn.disabled = false;
+            }
+        }
+
+        async function saveBluetoothPrinter() {
+            const mac = document.getElementById('btMacSelect').value;
+            if (!mac) return alert('Pilih printer terlebih dahulu!');
+            const btn = document.getElementById('btSaveBtn');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ printer_mac: mac })
+                });
+                if (res.ok) alert('Printer berhasil disimpan!');
+            } catch (e) {
+                alert('Gagal menyimpan: ' + e);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // ── ESC/POS byte builder ──────────────────────────────────
+        class ESCPOS {
+            constructor() { this.buf = []; }
+            cmd(...bytes) { this.buf.push(...bytes); return this; }
+            init() { return this.cmd(0x1B, 0x40); }
+            align(a) { return this.cmd(0x1B, 0x61, a); }      // 0=L 1=C 2=R
+            bold(on) { return this.cmd(0x1B, 0x45, on ? 1 : 0); }
+            size(s) { return this.cmd(0x1D, 0x21, s); }       // 0=normal 0x11=2x
+            lf(n = 1) { for (let i = 0; i < n; i++) this.buf.push(0x0A); return this; }
+            text(str) {
+                for (let i = 0; i < str.length; i++) this.buf.push(str.charCodeAt(i) & 0xFF);
+                return this;
+            }
+            line(str = '', n = 1) { return this.text(str).lf(n); }
+            sep(ch = '-', w = 32) { return this.line(ch.repeat(w)); }
+            cut() { return this.cmd(0x1D, 0x56, 0x00); }
+            bytes() { return new Uint8Array(this.buf); }
+        }
+
+        function padR(s, w) { s = String(s); return s.length >= w ? s.slice(0, w) : s + ' '.repeat(w - s.length); }
+        function padL(s, w) { s = String(s); return s.length >= w ? s.slice(0, w) : ' '.repeat(w - s.length) + s; }
+        function rp(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+
+        // Word-wrap: memecah teks panjang jadi array baris sesuai lebar kertas
+        function wrapText(str, width) {
+            str = String(str || '');
+            const words = str.split(' ');
+            const lines = [];
+            let current = '';
+            for (const word of words) {
+                if (!current) {
+                    current = word;
+                } else if ((current + ' ' + word).length <= width) {
+                    current += ' ' + word;
+                } else {
+                    lines.push(current);
+                    current = word;
+                }
+            }
+            if (current) lines.push(current);
+            return lines.length ? lines : [''];
+        }
+
+        function buildReceipt(order, bayarNominal, metode) {
+            const W = 32; // chars for 58mm; change to 42 for 80mm
+            const now = new Date();
+            const ts = now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID');
+            const total = order.total || order.total_akhir || 0;
+            const bayar = parseInt(bayarNominal) || total;
+            const kembalian = metode === 'cash' ? bayar - total : 0;
+
+            const esc = new ESCPOS();
+            esc.init()
+                // ── Header ──
+                .align(1)
+                .bold(true).size(0x11).line('KAPIO').size(0).bold(false)
+                .line('Kedai Kita Semua')
+                .line(ts)
+                .sep('─', W)
+                // ── Order info ──
+                .align(0)
+                .line('No Antrian : ' + (order.meja || '-'))
+                .line('Pelanggan  : ' + (order.pelanggan || '-'))
+                .line('Kasir      : ' + (order.kasir || 'Kasir'))
+                .line('Metode     : ' + (metode === 'cash' ? 'Tunai' : 'QRIS/Transfer'))
+                .sep('-', W);
+
+            // ── Items ──
+            // Format data: "NamaMenu\nQty  Harga  Subtotal" dipisahkan oleh " | "
+            const menuStr = order.menu || '';
+            if (menuStr) {
+                menuStr.split('|').forEach(rawItem => {
+                    rawItem = rawItem.trim();
+                    if (!rawItem) return;
+
+                    // Pisahkan baris nama dari baris detail (qty/harga/subtotal)
+                    const parts = rawItem.split('\n');
+                    const namaRaw = parts[0].trim();
+                    const detailRaw = parts[1] ? parts[1].trim() : '';
+
+                    // Word-wrap nama menu agar tidak terpotong
+                    const namaLines = wrapText(namaRaw, W);
+                    namaLines.forEach(l => esc.line(l));
+
+                    // Tampilkan detail qty x harga = subtotal jika ada
+                    if (detailRaw) {
+                        const nums = detailRaw.split(/\s+/).filter(Boolean);
+                        if (nums.length >= 3) {
+                            const qty = nums[0];
+                            const harga = parseInt(nums[1]) || 0;
+                            const sub = parseInt(nums[2]) || 0;
+                            const detailLine = `  ${qty}x ${rp(harga)}`.slice(0, W - rp(sub).length - 1);
+                            esc.line(detailLine + ' ' + rp(sub));
+                        } else if (nums.length >= 1) {
+                            // fallback: tulis apa adanya tapi wrap
+                            wrapText(detailRaw, W).forEach(l => esc.line('  ' + l));
+                        }
+                    }
+                });
+            }
+
+            esc.sep('=', W)
+                // ── Totals ──
+                .bold(true)
+                .line(padR('TOTAL', W - rp(total).length) + rp(total))
+                .bold(false);
+
+            if (metode === 'cash') {
+                esc.line(padR('Bayar', W - rp(bayar).length) + rp(bayar));
+                esc.line(padR('Kembalian', W - rp(kembalian).length) + rp(kembalian));
+            }
+
+            esc.sep('-', W)
+                .align(1)
+                .line('Terima Kasih!')
+                .lf(1)
+                .line('Anda Kecewa Tanya Kami,')
+                .line('Anda Puas Tanya Orang terdekat:)')
+                .lf(3)
+                .cut();
+
+            return esc.bytes();
+        }
+
+        async function sendBytesToServer(bytes) {
+            try {
+                const res = await fetch('/api/print_receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bytes: Array.from(bytes) })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Gagal cetak di server');
+                return true;
+            } catch (err) {
+                console.error('Server print failed:', err);
+                alert('Gagal cetak struk: ' + err.message);
+                return false;
+            }
+        }
+
+        async function printReceiptViaBluetooth(order, bayar, metode) {
+            const bytes = buildReceipt(order, bayar, metode);
+            await sendBytesToServer(bytes);
+        }
+
+        async function testPrintBluetooth() {
+            const esc = new ESCPOS();
+            esc.init()
+                .align(1)
+                .bold(true).size(0x11).line('KAPIO').size(0).bold(false)
+                .line('--- TEST CETAK SERVER ---')
+                .lf(2).cut();
+            await sendBytesToServer(esc.bytes());
+        }
+
+        // Cetak Struk Barista — thermal server (background)
+        async function printBaristaStruk(orderId) {
+            // Selalu trigger thermal server-side (USB/Local)
+            fetch(`/print_barista/${orderId}`, { redirect: 'follow' }).catch(() => { });
+
+            try {
+                const resp = await fetch(`/api/order/${orderId}`);
+                const order = await resp.json();
+                const bytes = buildBaristaReceipt(order);
+                await sendBytesToServer(bytes);
+            } catch (err) {
+                console.error('BT barista print error:', err);
+            }
+        }
+
+        // ESC/POS receipt format khusus Barista (tanpa harga, teks besar)
+        function buildBaristaReceipt(order) {
+            const W = 32;
+            const now = new Date();
+            const ts = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+            const esc = new ESCPOS();
+            esc.init()
+                .align(1)
+                .bold(true).size(0x11).line('BARISTA').size(0).bold(false)
+                .align(0)
+                .sep('-', W)
+                .bold(true)
+                .line('No : A-' + (order.meja || '-'))
+                .line('Nama : ' + (order.pelanggan || '-'))
+                .bold(false)
+                .line('Waktu : ' + ts)
+                .sep('=', W);
+
+            const menuStr = order.menu || '';
+
+            menuStr.split('|').forEach(rawItem => {
+                rawItem = rawItem.trim();
+                if (!rawItem) return;
+
+                const parts = rawItem.split('\n');
+                const namaRaw = parts[0].trim();
+                const detailRaw = parts[1] ? parts[1].trim() : '';
+
+                let qty = '1';
+
+                if (detailRaw) {
+                    const nums = detailRaw.split(/\s+/).filter(Boolean);
+
+                    if (nums.length >= 1) {
+                        qty = nums[0];
+                    }
+                }
+
+                const textBarista = `${qty}x ${namaRaw}`;
+
+                wrapText(textBarista, W).forEach(line => {
+                    esc.align(0)
+                        .bold(true)
+                        .line(line.toUpperCase())
+                        .bold(false);
+                });
+            });
+
+            esc.sep('-', W).lf(3).cut();
+            return esc.bytes();
+        }
+        // Set Kasir Name from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedKasir = localStorage.getItem('globalKasir');
+            if (savedKasir) {
+                document.getElementById('globalKasirName').value = savedKasir;
             }
         });
-    });
-
-    function panggilPesanan(nomor, nama) {
-        const teks = `Nomor antrian ${nomor}. Atas nama ${nama}. Silakan ambil pesanan Anda.`;
-        const speech = new SpeechSynthesisUtterance(teks);
-        const selectedVoiceIndex = document.getElementById('voiceSelect').value;
-        if (voices[selectedVoiceIndex]) {
-            speech.voice = voices[selectedVoiceIndex];
-        }
-        speech.lang = 'id-ID';
-        speech.rate = 0.9;
-        window.speechSynthesis.speak(speech);
-    }
-
-    function toggleTheme() {
-        const currentTheme = html.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', newTheme);
-        document.getElementById('themeIcon').className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-        document.getElementById('themeText').innerText = newTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
-        localStorage.setItem('theme', newTheme);
-    }
-
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    html.setAttribute('data-theme', savedTheme);
-    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    document.getElementById('themeText').innerText = savedTheme === 'dark' ? 'Lighting Mode' : 'Dark Mode';
-
-    function openPayment(id, total, meja) {
-        currentOrderId = id;
-        currentTotal = parseInt(total);
-        document.getElementById('modalTotalTxt').innerText = "Rp " + currentTotal.toLocaleString('id-ID').replace(/,/g, '.');
-        document.getElementById('payMethod').value = 'cash';
-        document.getElementById('inputBayar').value = '';
-        updatePaymentMethod();
-        document.getElementById('payModal').style.display = 'block';
-    }
-
-    function updatePaymentMethod() {
-        const method = document.getElementById('payMethod').value;
-        const bayarGroup = document.getElementById('bayarGroup');
-        const changeInfo = document.getElementById('paymentChangeInfo');
-        if (method === 'cash') {
-            bayarGroup.style.display = 'block';
-            changeInfo.style.display = 'block';
-            updateChange();
-        } else {
-            bayarGroup.style.display = 'none';
-            changeInfo.style.display = 'none';
-            document.getElementById('inputBayar').value = '';
-        }
-    }
-
-    function formatRupiah(value) {
-        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    }
-
-    function getBayarValue() {
-        const raw = document.getElementById('inputBayar').value.replace(/\D/g, '');
-        return raw ? parseInt(raw, 10) : 0;
-    }
-
-    function formatBayarInput() {
-        const input = document.getElementById('inputBayar');
-        const raw = input.value.replace(/\D/g, '');
-        if (!raw) {
-            input.value = '';
-            return;
-        }
-        input.value = formatRupiah(raw);
-    }
-
-    function updateChange() {
-        const bayarValue = getBayarValue();
-        const change = bayarValue - currentTotal;
-        const formatted = "Rp " + Math.abs(change).toLocaleString('id-ID').replace(/,/g, '.');
-        const text = change >= 0 ? `KEMBALIAN: ${formatted}` : `KURANG: ${formatted}`;
-        document.getElementById('paymentChangeText').innerText = text;
-    }
-
-    function prosesBayar() {
-        const method = document.getElementById('payMethod').value;
-        const bayar = method === 'cash' ? (getBayarValue() || currentTotal) : currentTotal;
-        
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/pay/${currentOrderId}`;
-        
-        const fields = { kasir: 'Admin', bayar, metode: method, total_akhir: currentTotal };
-        for (const [key, value] of Object.entries(fields)) {
-            const input = document.createElement('input');
-            input.type = 'hidden'; input.name = key; input.value = value;
-            form.appendChild(input);
-        }
-        document.body.appendChild(form);
-        form.submit();
-    }
-
-    // Check for tab parameter on load
-    window.onload = () => {
-        const params = new URLSearchParams(window.location.search);
-        const tab = params.get('tab');
-        if (tab === 'menu') switchAdminTab('menu');
-        if (tab === 'recipe') switchAdminTab('recipe');
-    };
-</script>
+    </script>
 </body>
+
 </html>

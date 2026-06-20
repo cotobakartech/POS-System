@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi & Upah CREW</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #f0f0f5;
+            --text-secondary: #888;
+            --accent: #eab308;
+            --green: #10b981;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --orange: #f97316;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 900;
+        }
+
+        .header h1 i {
+            color: var(--accent);
+            margin-right: 10px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .glass {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 5px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            width: fit-content;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 26px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        .stat-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead th {
+            padding: 14px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tbody td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-hadir {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+        }
+
+        .badge-izin {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--orange);
+        }
+
+        .badge-alpha {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        .badge-aktif {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+        }
+
+        .badge-nonaktif {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);
+        }
+
+        .btn-green {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .btn-red {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Attendance Cards */
+        .attendance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .att-card {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .att-card .emp-name {
+            font-weight: 800;
+            font-size: 16px;
+        }
+
+        .att-card .emp-pos {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .att-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .att-actions form {
+            flex: 1;
+        }
+
+        .att-actions .att-btn {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .att-actions .att-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .att-actions .att-btn.selected-hadir {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .att-actions .att-btn.selected-izin {
+            background: rgba(249, 115, 22, 0.15);
+            border-color: var(--orange);
+            color: var(--orange);
+        }
+
+        .att-actions .att-btn.selected-alpha {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .attendance-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <a href="/admin" class="back-link"><i class="fas fa-arrow-left"></i> Kembali ke Admin</a>
+                <h1 style="margin-top: 10px;"><i class="fas fa-user-clock"></i>Absensi & Upah</h1>
+                <p>Kelola kehadiran dan perhitungan upah CREW</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('addEmployeeModal').style.display='flex'">
+                <i class="fas fa-user-plus"></i> Tambah CREW
+            </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card glass" style="border-left: 4px solid var(--blue);">
+                <div>
+                    <div class="label">Total CREW</div>
+                    <div class="value" style="color: var(--blue);">{{ employees|selectattr('aktif')|list|length }}</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(59,130,246,0.1); color: var(--blue);">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-card glass" style="border-left: 4px solid var(--green);">
+                <div>
+                    <div class="label">Hadir Hari Ini</div>
+                    <div class="value" style="color: var(--green);">{{ today_map.values()|selectattr('status',
+                        'equalto', 'hadir')|list|length }}</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(16,185,129,0.1); color: var(--green);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="stat-card glass" style="border-left: 4px solid var(--accent);">
+                <div>
+                    <div class="label">Total Upah Bulan Ini</div>
+                    <div class="value" style="color: var(--accent); font-size: 22px;">Rp {{
+                        "{:,.0f}".format(monthly_summary|sum(attribute='total_upah')).replace(",", ".") }}</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(234,179,8,0.1); color: var(--accent);">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('absensi')">
+                <i class="fas fa-calendar-check" style="margin-right: 6px;"></i>Absensi Hari Ini
+            </button>
+            <button class="tab-btn" onclick="switchTab('rekap')">
+                <i class="fas fa-table" style="margin-right: 6px;"></i>Rekap Upah {{ bulybvkan }}
+            </button>
+            <button class="tab-btn" onclick="switchTab('crew')">
+                <i class="fas fa-id-card" style="margin-right: 6px;"></i>Daftar CREW
+            </button>
+        </div>
+
+        <!-- TAB 1: Absensi Hari Ini -->
+        <div id="tab-absensi" class="tab-content active">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <i class="fas fa-calendar" style="color: var(--accent);"></i>
+                <h3 style="font-weight: 800;">{{ today_str }}</h3>
+            </div>
+
+            {% set active_employees = employees|selectattr('aktif')|list %}
+            {% if active_employees %}
+            <div class="attendance-grid">
+                {% for emp in active_employees %}
+                <div class="att-card glass">
+                    <div>
+                        <div class="emp-name">{{ emp.nama }}</div>
+                        <div class="emp-pos">{{ emp.posisi or 'Staff' }} &middot; Bln: Rp {{
+                            "{:,.0f}".format(emp.upah_bulanan | default(0)).replace(",", ".") }} &middot; Hr: Rp {{
+                            "{:,.0f}".format(emp.upah_harian).replace(",", ".") }}</div>
+                    </div>
+                    {% set current_status = today_map.get(emp.id, {}).get('status', '') %}
+                    <div class="att-actions">
+                        <form action="/record_attendance" method="POST">
+                            <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                            <input type="hidden" name="tanggal" value="{{ today_str }}">
+                            <input type="hidden" name="status" value="hadir">
+                            <button type="submit" class="att-btn {{ 'selected-hadir' if current_status == 'hadir' }}">
+                                <i class="fas fa-check"></i> Hadir
+                            </button>
+                        </form>
+                        <form action="/record_attendance" method="POST">
+                            <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                            <input type="hidden" name="tanggal" value="{{ today_str }}">
+                            <input type="hidden" name="status" value="hadir_double">
+                            <button type="submit"
+                                class="att-btn {{ 'selected-hadir' if current_status == 'hadir_double' }}"
+                                style="background: rgba(59, 130, 246, 0.1); border-color: #3b82f6;">
+                                <i class="fas fa-check-double"></i> Double
+                            </button>
+                        </form>
+                        <form action="/record_attendance" method="POST">
+                            <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                            <input type="hidden" name="tanggal" value="{{ today_str }}">
+                            <input type="hidden" name="status" value="izin">
+                            <button type="submit" class="att-btn {{ 'selected-izin' if current_status == 'izin' }}">
+                                <i class="fas fa-envelope"></i> Izin
+                            </button>
+                        </form>
+                        <form action="/record_attendance" method="POST">
+                            <input type="hidden" name="employee_id" value="{{ emp.id }}">
+                            <input type="hidden" name="tanggal" value="{{ today_str }}">
+                            <input type="hidden" name="status" value="alpha">
+                            <button type="submit" class="att-btn {{ 'selected-alpha' if current_status == 'alpha' }}">
+                                <i class="fas fa-times"></i> Alpha
+                            </button>
+                        </form>
+                    </div>
+                    {% if current_status %}
+                    <div
+                        style="font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                        {% if today_map.get(emp.id, {}).get('waktu_masuk') %}
+                        <span style="background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px;">
+                            <i class="far fa-clock"></i> Masuk: {{ today_map[emp.id]['waktu_masuk'] }}
+                        </span>
+                        {% if today_map[emp.id].get('shift') %}
+                        <span
+                            style="background: rgba(59,130,246,0.15); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-weight: 700;">
+                            <i class="fas fa-sun" style="font-size: 10px;"></i> {{ today_map[emp.id]['shift'] }}
+                        </span>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="glass" style="padding: 60px; text-align: center; color: var(--text-secondary);">
+                <i class="fas fa-user-plus" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                <p>Belum ada CREW. Tambahkan CREW terlebih dahulu.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TAB 2: Rekap Upah Bulanan -->
+        <div id="tab-rekap" class="tab-content">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">
+                <i class="fas fa-calculator" style="color: var(--accent); margin-right: 8px;"></i>
+                Rekap Upah — {{ bulan }}
+            </h3>
+
+            {% if monthly_summary %}
+            <div class="glass table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CREW</th>
+                            <th>Posisi</th>
+                            <th>Upah/Bulan</th>
+                            <th>Upah/Hari</th>
+                            <th style="text-align:center;">Hadir</th>
+                            <th style="text-align:center;">Izin</th>
+                            <th style="text-align:center;">Alpha</th>
+                            <th style="text-align:right;">Total Upah</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in monthly_summary %}
+                        <tr>
+                            <td style="font-weight: 700;">{{ s.nama }}</td>
+                            <td style="color: var(--text-secondary);">{{ s.posisi or '-' }}</td>
+                            <td>Rp {{ "{:,.0f}".format(s.upah_bulanan).replace(",", ".") }}</td>
+                            <td>Rp {{ "{:,.0f}".format(s.upah_harian).replace(",", ".") }}</td>
+                            <td style="text-align:center;"><span class="badge badge-hadir">{{ s.hadir }}</span></td>
+                            <td style="text-align:center;"><span class="badge badge-izin">{{ s.izin }}</span></td>
+                            <td style="text-align:center;"><span class="badge badge-alpha">{{ s.alpha }}</span></td>
+                            <td style="text-align:right; font-weight: 800; color: var(--accent);">Rp {{
+                                "{:,.0f}".format(s.total_upah).replace(",", ".") }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="background: rgba(234,179,8,0.05);">
+                            <td colspan="4" style="font-weight: 800;">TOTAL</td>
+                            <td style="text-align:center; font-weight: 700;">{{ monthly_summary|sum(attribute='hadir')
+                                }}</td>
+                            <td style="text-align:center; font-weight: 700;">{{ monthly_summary|sum(attribute='izin') }}
+                            </td>
+                            <td style="text-align:center; font-weight: 700;">{{ monthly_summary|sum(attribute='alpha')
+                                }}</td>
+                            <td style="text-align:right; font-weight: 900; font-size: 16px; color: var(--accent);">Rp {{
+                                "{:,.0f}".format(monthly_summary|sum(attribute='total_upah')).replace(",", ".") }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="glass" style="padding: 60px; text-align: center; color: var(--text-secondary);">
+                <i class="fas fa-calculator" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                <p>Belum ada data absensi bulan ini.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TAB 3: Daftar CREW -->
+        <div id="tab-crew" class="tab-content">
+            <h3 style="font-weight: 800; margin-bottom: 20px;">
+                <i class="fas fa-id-card" style="color: var(--accent); margin-right: 8px;"></i>
+                Daftar CREW
+            </h3>
+
+            {% if employees %}
+            <div class="glass table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nama</th>
+                            <th>Posisi</th>
+                            <th>Masuk Tgl</th>
+                            <th>Jadwal Gajian</th>
+                            <th>Upah/Bulan</th>
+                            <th>Upah/Hari</th>
+                            <th>Status</th>
+                            <th style="text-align:right;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td style="font-weight: 700;">{{ emp.nama }}</td>
+                            <td style="color: var(--text-secondary);">{{ emp.posisi or '-' }}</td>
+                            <td>{{ emp.tanggal_masuk if emp.tanggal_masuk else '-' }}</td>
+                            <td style="font-weight: 800; color: var(--accent);">Tiap Tgl {{
+                                emp.tanggal_masuk.split('-')[0] if emp.tanggal_masuk else '?' }}</td>
+                            <td>Rp {{ "{:,.0f}".format(emp.upah_bulanan | default(0)).replace(",", ".") }}</td>
+                            <td>Rp {{ "{:,.0f}".format(emp.upah_harian).replace(",", ".") }}</td>
+                            <td>
+                                {% if emp.aktif %}
+                                <span class="badge badge-aktif">Aktif</span>
+                                {% else %}
+                                <span class="badge badge-nonaktif">Non-aktif</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                    <button class="btn btn-ghost btn-sm"
+                                        onclick="openEditEmployee({{ emp.id }}, '{{ emp.nama }}', '{{ emp.posisi or '' }}', {{ emp.upah_bulanan | default(0) }}, '{{ emp.tanggal_masuk | default('') }}')">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <form action="/toggle_employee/{{ emp.id }}" method="POST" style="display:inline;">
+                                        <button type="submit"
+                                            class="btn btn-sm {{ 'btn-red' if emp.aktif else 'btn-green' }}"
+                                            title="{{ 'Nonaktifkan' if emp.aktif else 'Aktifkan' }}">
+                                            <i class="fas {{ 'fa-user-slash' if emp.aktif else 'fa-user-check' }}"></i>
+                                        </button>
+                                    </form>
+                                    <form action="/delete_employee/{{ emp.id }}" method="POST" style="display:inline;"
+                                        onsubmit="return confirm('Yakin hapus CREW {{ emp.nama }}? Semua data absensinya juga akan terhapus.')">
+                                        <button type="submit" class="btn btn-sm btn-ghost" style="color: var(--red);">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="glass" style="padding: 60px; text-align: center; color: var(--text-secondary);">
+                <i class="fas fa-user-plus" style="font-size: 48px; opacity: 0.3; margin-bottom: 15px;"></i>
+                <p>Belum ada CREW terdaftar.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal Tambah CREW -->
+    <div id="addEmployeeModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 440px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 25px;"><i class="fas fa-user-plus"
+                    style="color: var(--accent); margin-right: 8px;"></i>Tambah CREW</h3>
+            <form action="/add_employee" method="POST">
+                <div class="input-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" name="nama" placeholder="contoh: Ahmad Rizky" required>
+                </div>
+                <div class="input-group">
+                    <label>Posisi / Jabatan</label>
+                    <input type="text" name="posisi" placeholder="contoh: Barista, Kasir">
+                </div>
+                <div class="input-group">
+                    <label>Tanggal Mulai Masuk Bekerja</label>
+                    <input type="text" name="tanggal_masuk" placeholder="contoh: 15-05-2024" value="{{ today_str }}"
+                        required>
+                </div>
+                <div class="input-group">
+                    <label>Upah Pokok Bulanan (Rp)</label>
+                    <input type="number" name="upah_bulanan" placeholder="contoh: 1500000" value="0" required>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;"><i
+                            class="fas fa-info-circle"></i> Upah per hari otomatis dihitung (Bulanan / 30)</p>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                    <button type="button" class="btn btn-ghost"
+                        onclick="document.getElementById('addEmployeeModal').style.display='none'"
+                        style="justify-content: center;">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="justify-content: center;">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit CREW -->
+    <div id="editEmployeeModal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+        <div class="glass modal-content" style="width: 440px; padding: 40px;">
+            <h3 style="font-weight: 800; margin-bottom: 25px;"><i class="fas fa-pen"
+                    style="color: var(--accent); margin-right: 8px;"></i>Edit CREW</h3>
+            <form id="editEmployeeForm" method="POST">
+                <div class="input-group">
+                    <label>Nama Lengkap</label>
+                    <input type="text" name="nama" id="editEmpNama" required>
+                </div>
+                <div class="input-group">
+                    <label>Posisi / Jabatan</label>
+                    <input type="text" name="posisi" id="editEmpPosisi">
+                </div>
+                <div class="input-group">
+                    <label>Tanggal Mulai Masuk Bekerja</label>
+                    <input type="text" name="tanggal_masuk" id="editEmpTglMasuk" placeholder="contoh: 15-05-2024"
+                        required>
+                </div>
+                <div class="input-group">
+                    <label>Upah Pokok Bulanan (Rp)</label>
+                    <input type="number" name="upah_bulanan" id="editEmpUpahBulanan" required>
+                    <p style="font-size: 11px; color: var(--text-secondary); margin-top: 5px;"><i
+                            class="fas fa-info-circle"></i> Upah per hari otomatis dihitung (Bulanan / 30)</p>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                    <button type="button" class="btn btn-ghost"
+                        onclick="document.getElementById('editEmployeeModal').style.display='none'"
+                        style="justify-content: center;">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="justify-content: center;">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function openEditEmployee(id, nama, posisi, upahBulanan, tanggalMasuk) {
+            document.getElementById('editEmployeeForm').action = '/edit_employee/' + id;
+            document.getElementById('editEmpNama').value = nama;
+            document.getElementById('editEmpPosisi').value = posisi;
+            document.getElementById('editEmpUpahBulanan').value = upahBulanan;
+            document.getElementById('editEmpTglMasuk').value = tanggalMasuk;
+            document.getElementById('editEmployeeModal').style.display = 'flex';
+        }
+    </script>
+</body>
+
+</html>

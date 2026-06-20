@@ -1,32 +1,41 @@
 <!DOCTYPE html>
 <html lang="id" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POS System by COTOBAKARTECH - Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body style="display: flex; align-items: center; justify-content: center; height: 100vh;">
 
-<div class="glass" style="width: 100%; max-width: 400px; padding: 50px; border-radius: 30px; text-align: center;">
-    <div style="background: var(--accent); color: #000; width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; margin: 0 auto 30px auto;">BOS</div>
-    <h1 style="font-weight: 800; margin-bottom: 10px;">Selamat Datang</h1>
-    <p style="color: var(--text-secondary); margin-bottom: 40px; font-size: 14px;">Silakan login untuk akses sistem POS.</p>
+    <div class="glass" style="width: 100%; max-width: 400px; padding: 50px; border-radius: 30px; text-align: center;">
+        <div
+            style="background: var(--accent); color: #000; width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; margin: 0 auto 30px auto;">
+            KAPIO</div>
+        <h1 style="font-weight: 800; margin-bottom: 10px;">Selamat Datang</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 40px; font-size: 14px;">Silakan login untuk akses sistem
+            POS.</p>
 
-    <form method="POST">
-        <div class="input-group">
-            <input type="text" name="username" placeholder="Username" required>
-        </div>
-        <div class="input-group">
-            <input type="password" name="password" placeholder="Password" required>
-        </div>
-        <button type="submit" class="btn btn-primary glow-accent" style="width: 100%; margin-top: 20px; height: 55px;">Masuk Sekarang</button>
-    </form>
+        <form method="POST">
+            <div class="input-group">
+                <input type="text" name="username" placeholder="Username" required>
+            </div>
+            <div class="input-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn btn-primary glow-accent"
+                style="width: 100%; margin-top: 20px; height: 55px;">Masuk Sekarang</button>
+        </form>
 
-    <p style="margin-top: 16px; font-size: 13px;">Belum punya akun crew? <a href="{{ url_for('signup') }}">Daftar crew</a></p>
+        <p style="margin-top: 16px; font-size: 13px;">Belum punya akun crew? <a href="{{ url_for('signup') }}">Daftar
+                crew</a></p>
 
-    <p style="margin-top: 40px; font-size: 12px; color: var(--text-secondary);">&copy; 2026 POS System by COTOBAKARTECH</p>
-</div>
+        <p style="margin-top: 40px; font-size: 12px; color: var(--text-secondary);">&copy; 2026 POS System by
+            COTOBAKARTECH</p>
+    </div>
 
 </body>
+
 </html>

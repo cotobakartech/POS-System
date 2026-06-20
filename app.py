@@ -14,7 +14,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import requests
 from pdf_generator import generate_report_pdf
-
+import serial
+import serial.tools.list_ports
+import base64
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'pos_system_ultra_secure_key_2026')
 app.config['UPLOAD_FOLDER'] = 'static/menu'
@@ -154,6 +156,7 @@ def generate_thermal_receipt(order, width_chars, receipt_type=None):
     lines.append(f'NO. PESANAN: #{order["id"]}')
     lines.append(f'TANGGAL: {order["waktu"]}')
     lines.append(f'PELANGGAN: {order["pelanggan"] or "-"}')
+    lines.append(f'KASIR     : {order["kasir"] or "-"}')
     lines.append('-' * width_chars)
     cart = json.loads(order['cart_json'] or '[]')
     show_prices = receipt_type != 'BARISTA'
@@ -222,7 +225,7 @@ def init_db():
             topping TEXT,
             harga_topping TEXT,
             use_ppn INTEGER DEFAULT 1,
-            show_on_tv INTEGER DEFAULT 0
+            show_on_tv INTEGER DEFAULT 1
         );
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -288,6 +291,23 @@ def init_db():
             FOREIGN KEY (membership_id) REFERENCES membership(id),
             FOREIGN KEY (order_id) REFERENCES orders(id)
         );
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nama TEXT NOT NULL,
+            posisi TEXT,
+            upah_harian INTEGER DEFAULT 0,
+            aktif INTEGER DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL,
+            tanggal TEXT NOT NULL,
+            status TEXT DEFAULT 'hadir',
+            waktu_masuk TEXT,
+            catatan TEXT,
+            FOREIGN KEY (employee_id) REFERENCES employees(id),
+            UNIQUE(employee_id, tanggal)
+        );
     ''')
     
     # Migrasi: Tambah kolom pelanggan jika belum ada
@@ -331,6 +351,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        conn.execute("ALTER TABLE menus ADD COLUMN deskripsi TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     # Migrasi: tambah kolom untuk membership dan student discount
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN is_dine_in INTEGER DEFAULT 1")
@@ -370,6 +395,24 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        conn.execute("ALTER TABLE membership ADD COLUMN saldo_cashback INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN cashback_earned INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE orders ADD COLUMN cashback_redeemed INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
     # Default Admin
     admin_exists = conn.execute("SELECT * FROM users WHERE username='admin'").fetchone()
     if not admin_exists:
@@ -383,6 +426,8 @@ def init_db():
         conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ('thermal_printer_width', '58'))
     if not conn.execute("SELECT * FROM settings WHERE key='thermal_printer_name'").fetchone():
         conn.execute("INSERT INTO settings (key, value) VALUES (?, ?)", ('thermal_printer_name', ''))
+    # Server-managed Bluetooth (Classic via COM port)
+    # Bluetooth server-side printing removed; no default server BT settings
     
     conn.commit()
     conn.close()
@@ -394,6 +439,16 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            return "Akses Ditolak: Halaman ini hanya untuk Admin.", 403
         return f(*args, **kwargs)
     return decorated_function
 
@@ -433,23 +488,245 @@ def admin():
             }
         recipes_grouped[m_id]['ingredients'].append(r)
         
+    # Live Data Laporan
+    unarchived_orders = conn.execute("SELECT total, waktu FROM orders WHERE status='selesai' AND is_archived=0").fetchall()
+    unarchived_expenses = conn.execute("SELECT jumlah, waktu FROM expenses WHERE is_archived=0").fetchall()
+    unarchived_stocks = conn.execute("SELECT jumlah, qty, waktu FROM input_stok WHERE is_archived=0").fetchall()
+    
+    # Archives
+    files = [f for f in os.listdir('.') if f.endswith('.xlsx') and f.startswith('Laporan_')]
+    archive_data = []
+    
+    # Use a global dictionary to cache read Excel files for performance
+    global archive_cache
+    if 'archive_cache' not in globals():
+        archive_cache = {}
+
+    totals = {
+        'hari_ini': {'revenue': 0, 'expense': 0, 'profit': 0},
+        'bulan_ini': {'revenue': 0, 'expense': 0, 'profit': 0},
+        'tahun_ini': {'revenue': 0, 'expense': 0, 'profit': 0},
+        'semua': {'revenue': 0, 'expense': 0, 'profit': 0}
+    }
+    
+    today_dt = datetime.now()
+    today_str = today_dt.strftime("%d-%m-%Y")
+    this_month_str = today_dt.strftime("%m-%Y")
+    this_year_str = today_dt.strftime("%Y")
+    
+    # Process Live Data
+    for o in unarchived_orders:
+        try:
+            d = o['waktu'].split(' ')[0] # DD-MM-YYYY
+            m = d[3:] # MM-YYYY
+            y = d[6:] # YYYY
+            
+            totals['semua']['revenue'] += o['total']
+            if d == today_str: totals['hari_ini']['revenue'] += o['total']
+            if m == this_month_str: totals['bulan_ini']['revenue'] += o['total']
+            if y == this_year_str: totals['tahun_ini']['revenue'] += o['total']
+        except: pass
+        
+    for e in unarchived_expenses:
+        try:
+            d = e['waktu'].split(' ')[0]
+            m = d[3:]
+            y = d[6:]
+            totals['semua']['expense'] += e['jumlah']
+            if d == today_str: totals['hari_ini']['expense'] += e['jumlah']
+            if m == this_month_str: totals['bulan_ini']['expense'] += e['jumlah']
+            if y == this_year_str: totals['tahun_ini']['expense'] += e['jumlah']
+        except: pass
+        
+    for s in unarchived_stocks:
+        try:
+            d = s['waktu'].split(' ')[0]
+            m = d[3:]
+            y = d[6:]
+            val = s['jumlah'] * s['qty']
+            totals['semua']['expense'] += val
+            if d == today_str: totals['hari_ini']['expense'] += val
+            if m == this_month_str: totals['bulan_ini']['expense'] += val
+            if y == this_year_str: totals['tahun_ini']['expense'] += val
+        except: pass
+
+    for f in sorted(files, reverse=True):
+        if f not in archive_cache:
+            t_rev = 0
+            t_exp = 0
+            try:
+                # Read Revenue
+                try:
+                    df = pd.read_excel(f, sheet_name='Pemasukan')
+                    if 'total' in df.columns:
+                        t_rev = int(df['total'].sum())
+                except: pass
+                
+                # Read Expenses
+                try:
+                    df_exp = pd.read_excel(f, sheet_name='Pengeluaran')
+                    if 'jumlah' in df_exp.columns:
+                        t_exp += int(df_exp['jumlah'].sum())
+                except: pass
+                
+                # Read Stocks
+                try:
+                    df_stok = pd.read_excel(f, sheet_name='Stok')
+                    if 'jumlah' in df_stok.columns and 'qty' in df_stok.columns:
+                        t_exp += int((df_stok['jumlah'] * df_stok['qty']).sum())
+                except: pass
+                
+            except Exception as e:
+                pass
+            archive_cache[f] = {'revenue': t_rev, 'expense': t_exp}
+        
+        # Aggregate archived data into totals
+        try:
+            date_str = f[8:16] # YYYYMMDD
+            if len(date_str) == 8:
+                d = f"{date_str[6:8]}-{date_str[4:6]}-{date_str[0:4]}"
+                m = f"{date_str[4:6]}-{date_str[0:4]}"
+                y = f"{date_str[0:4]}"
+                
+                rev = archive_cache[f]['revenue']
+                exp = archive_cache[f]['expense']
+                
+                totals['semua']['revenue'] += rev
+                totals['semua']['expense'] += exp
+                if d == today_str:
+                    totals['hari_ini']['revenue'] += rev
+                    totals['hari_ini']['expense'] += exp
+                if m == this_month_str:
+                    totals['bulan_ini']['revenue'] += rev
+                    totals['bulan_ini']['expense'] += exp
+                if y == this_year_str:
+                    totals['tahun_ini']['revenue'] += rev
+                    totals['tahun_ini']['expense'] += exp
+        except: pass
+        
+        archive_data.append({'nama_file': f, 'summary': {'total_pemasukan': archive_cache[f]['revenue']}})
+        
+    for k in totals:
+        totals[k]['profit'] = totals[k]['revenue'] - totals[k]['expense']
+    
+    # Backwards compatibility for jinja variables (default to 'hari_ini')
+    revenue = totals['hari_ini']['revenue']
+    total_exp = totals['hari_ini']['expense']
+    profit = totals['hari_ini']['profit']
+    
+    orders_count = conn.execute("SELECT COUNT(id) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
+    
+    # Chart Data (Live unarchived data + Excel archives)
+    sales_raw = conn.execute("SELECT total, waktu FROM orders WHERE status='selesai' AND is_archived=0").fetchall()
+    daily_sales = {}
+    
+    # 1. Add unarchived live data
+    for s in sales_raw:
+        try:
+            d = s['waktu'].split(' ')[0]
+            daily_sales[d] = daily_sales.get(d, 0) + s['total']
+        except: pass
+
+    # Sync cache: remove deleted files
+    for cached_file in list(archive_cache.keys()):
+        if cached_file not in files:
+            del archive_cache[cached_file]
+
+    # 2. Add archived data from Excel cache
+    for f in files:
+        if f in archive_cache:
+            cached_data = archive_cache[f]
+            try:
+                date_str = f[8:16]
+                if len(date_str) == 8:
+                    formatted_date = f"{date_str[6:8]}-{date_str[4:6]}-{date_str[0:4]}"
+                    daily_sales[formatted_date] = daily_sales.get(formatted_date, 0) + cached_data['revenue']
+            except: pass
+    
+    today = datetime.now()
+    chart_labels = [(today - timedelta(days=i)).strftime("%d-%m-%Y") for i in range(29, -1, -1)]
+    chart_data = [daily_sales.get(l, 0) for l in chart_labels]
+    
+    import json
+    items_sold_today = {}
+    bs = {
+        'hari': {},
+        'bulan': {},
+        'tahun': {},
+        'semua': {}
+    }
+    for o in orders:
+        if o['status'] == 'selesai' and o['cart_json']:
+            try:
+                cart = json.loads(o['cart_json'])
+                waktu = o['waktu'] if o['waktu'] else ''
+                try:
+                    d = waktu.split(' ')[0]   # DD-MM-YYYY
+                    m = d[3:]                  # MM-YYYY
+                    y = d[6:]                  # YYYY
+                except:
+                    d, m, y = '', '', ''
+                for item in cart:
+                    nama = item.get('nama', 'Unknown')
+                    qty = int(item.get('qty', 1))
+                    subtotal = float(item.get('subtotal', 0))
+
+                    # Today's counter (for dashboard widget)
+                    if d == today_str:
+                        items_sold_today[nama] = items_sold_today.get(nama, 0) + qty
+
+                    # Best seller by period
+                    for period_key, match in [('hari', d == today_str), ('bulan', m == this_month_str), ('tahun', y == this_year_str), ('semua', True)]:
+                        if match:
+                            if nama not in bs[period_key]:
+                                bs[period_key][nama] = {'qty': 0, 'revenue': 0}
+                            bs[period_key][nama]['qty'] += qty
+                            bs[period_key][nama]['revenue'] += subtotal
+            except: pass
+
+    items_sold_today = dict(sorted(items_sold_today.items(), key=lambda x: x[1], reverse=True))
+    for key in bs:
+        bs[key] = dict(sorted(bs[key].items(), key=lambda x: x[1]['qty'], reverse=True))
+    bestsellers_all = bs['semua']  # backward compat for dashboard widget
+    
+    # Data Membership
+    members = conn.execute("SELECT * FROM membership ORDER BY created_at DESC").fetchall()
+    
     conn.close()
     printer_list = list_printers()
     selected_printer = get_setting('thermal_printer_name', '')
     selected_width = get_setting('thermal_printer_width', '58')
     return render_template('admin.html', orders=orders, menus=menus, materials=materials,
                            recipes=recipes_grouped, printer_list=printer_list,
-                           selected_printer=selected_printer, selected_width=selected_width)
+                           selected_printer=selected_printer, selected_width=selected_width,
+                           total_revenue=revenue, expenses=total_exp, profit=profit,
+                           total_orders=orders_count, chart_labels=chart_labels, chart_data=chart_data,
+                           archive_data=archive_data, members=members, report_totals=totals,
+                           items_sold_today=items_sold_today, bestsellers=bestsellers_all,
+                           bestsellers_by_period=bs)
+
+def calculate_cashback(total_amount):
+    if total_amount >= 350000:
+        return int(total_amount * 0.05)
+    elif total_amount >= 200000:
+        return int(total_amount * 0.04)
+    elif total_amount >= 100000:
+        return int(total_amount * 0.03)
+    elif total_amount >= 35000:
+        return int(total_amount * 0.02)
+    return 0
 
 @app.route('/order', methods=['POST'])
 @login_required
 def order():
     antrian = request.form.get('antrian')
     pelanggan = request.form.get('pelanggan')
+    kasir = request.form.get('kasir', '').strip() or 'Kasir'
     cart_data = json.loads(request.form.get('cart_data'))
     is_dine_in = 1 if request.form.get('is_dine_in') == 'true' or request.form.get('is_dine_in') == '1' else 0
     is_student_discount = 1 if request.form.get('is_student_discount') == 'true' or request.form.get('is_student_discount') == '1' else 0
     member_number_raw = request.form.get('member_number', '').strip()
+    redeem_cashback = int(request.form.get('redeem_cashback', 0) or 0)
     
     conn = get_db_connection()
     
@@ -460,34 +737,48 @@ def order():
 
     waktu = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     menu_str_list = []
-    total_semua = 0
+    subtotal = 0
     
     for item in cart_data:
-        subtotal = item['qty'] * item['harga']
-        total_semua += subtotal
-        menu_str_list.append(f"{item['nama']}\n{item['qty']}  {item['harga']}  {subtotal}")
+        item_subtotal = item['qty'] * item['harga']
+        subtotal += item_subtotal
+        menu_str_list.append(f"{item['nama']}\n{item['qty']}  {item['harga']}  {item_subtotal}")
     
     # Apply student discount if applicable (10% diskon, hanya untuk dine in)
     if is_student_discount and is_dine_in:
-        total_semua = int(total_semua * 0.9)
+        subtotal = int(subtotal * 0.9)
 
     member_id = None
-    points_earned = 0
+    cashback_earned = 0
+    cashback_redeemed = 0
+    
     if member_number_raw:
         member_number_clean = ''.join(filter(str.isdigit, member_number_raw))
         if member_number_clean:
-            member = conn.execute("SELECT id FROM membership WHERE nomor_telepon=? OR nomor_member=?", (member_number_clean, member_number_clean)).fetchone()
+            member = conn.execute("SELECT id, saldo_cashback FROM membership WHERE nomor_telepon=? OR nomor_member=?", (member_number_clean, member_number_clean)).fetchone()
             if member:
                 member_id = member['id']
-                if total_semua >= 65000:
-                    points_earned = 1
-                    conn.execute("UPDATE membership SET poin = poin + ? WHERE id=?", (points_earned, member_id))
+                available_cashback = member['saldo_cashback'] or 0
+                
+                # Hitung cashback yang digunakan (redeemed)
+                if redeem_cashback > 0:
+                    cashback_redeemed = min(redeem_cashback, available_cashback, subtotal)
+                    conn.execute("UPDATE membership SET saldo_cashback = saldo_cashback - ? WHERE id=?", (cashback_redeemed, member_id))
+                
+                # Hitung cashback yang akan didapatkan (earned)
+                # Dihitung dari subtotal sebelum pemotongan cashback
+                # Catatan: cashback belum dikreditkan ke saldo, baru dikreditkan saat bayar
+                cashback_earned = calculate_cashback(subtotal)
     
+    total_semua = subtotal - cashback_redeemed
+    if cashback_redeemed > 0:
+        menu_str_list.append(f"Potong Cashback\n-  {cashback_redeemed}  -{cashback_redeemed}")
+        
     menu_final = " | ".join(menu_str_list)
     cart_json = json.dumps(cart_data)
     
-    conn.execute("INSERT INTO orders (meja, pelanggan, menu, total, waktu, status, cart_json, is_dine_in, is_student_discount, membership_id, points_earned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                 (antrian, pelanggan, menu_final, total_semua, waktu, 'belum_bayar', cart_json, is_dine_in, is_student_discount, member_id, points_earned))
+    conn.execute("INSERT INTO orders (meja, pelanggan, menu, total, waktu, status, cart_json, is_dine_in, is_student_discount, membership_id, cashback_earned, cashback_redeemed, kasir) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (antrian, pelanggan, menu_final, total_semua, waktu, 'belum_bayar', cart_json, is_dine_in, is_student_discount, member_id, cashback_earned, cashback_redeemed, kasir))
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
@@ -503,21 +794,81 @@ def pay(order_id):
     conn = get_db_connection()
     conn.execute("UPDATE orders SET status='pending', metode=?, kasir=?, total=? WHERE id=?",
                  (metode, kasir, total_akhir, order_id))
-    conn.commit()
+    
+    # Kreditkan cashback ke saldo member saat pembayaran dikonfirmasi
     order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+    if order and order['membership_id'] and order['cashback_earned'] > 0:
+        conn.execute("UPDATE membership SET saldo_cashback = saldo_cashback + ? WHERE id=?",
+                     (order['cashback_earned'], order['membership_id']))
+    
+    conn.commit()
     conn.close()
 
     if order:
+        # Server-side Bluetooth printing removed — use Windows printer
         try:
             printer_name = get_setting('thermal_printer_name', '')
             printer_width = get_setting('thermal_printer_width', '58')
             width_chars = get_width_chars(printer_width)
             receipt_data = generate_thermal_receipt_bytes(order, width_chars)
-            print_to_printer(printer_name, receipt_data)
+            try:
+                print_to_printer(printer_name, receipt_data)
+            except Exception:
+                pass
         except Exception:
             pass
 
     return redirect(url_for('admin'))
+
+
+@app.route('/api/print', methods=['POST'])
+def api_print():
+    # Public API to trigger server-side printing (BT removed; uses configured Windows printer)
+
+    data = request.get_json() or {}
+    order_id = data.get('order_id') or request.form.get('order_id')
+    if not order_id:
+        # allow raw order payload
+        order = data.get('order')
+        if not order:
+            return jsonify({'ok': False, 'error': 'order_id or order payload required'}), 400
+    else:
+        conn = get_db_connection()
+        order = conn.execute('SELECT * FROM orders WHERE id=?', (order_id,)).fetchone()
+        conn.close()
+        if not order:
+            return jsonify({'ok': False, 'error': 'order not found'}), 404
+
+    try:
+        printer_width = get_setting('thermal_printer_width', '58')
+        width_chars = get_width_chars(printer_width)
+        # if order is sqlite Row, convert to dict-like access in generate
+        receipt_data = generate_thermal_receipt_bytes(order, width_chars)
+        printer_name = get_setting('thermal_printer_name', '')
+        print_to_printer(printer_name, receipt_data)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+
+@app.route('/api/list_com')
+@login_required
+def api_list_com():
+    # Listing COM ports for Bluetooth printers is not supported in this build
+    return jsonify({'ok': False, 'error': 'BT listing not supported'}), 400
+
+
+@app.route('/api/print_test', methods=['POST'])
+@login_required
+def api_print_test():
+    payload = request.get_json() or {}
+    text = payload.get('text') or '*** TEST CETAK ***\nKAPIO - TEST PRINT\n\n\n'
+    try:
+        printer_name = get_setting('thermal_printer_name', '')
+        print_to_printer(printer_name, text.encode('utf-8'))
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 @app.route('/finish/<int:order_id>', methods=['POST'])
 @login_required
@@ -565,6 +916,7 @@ def save_printer_settings():
     printer_width = request.form.get('thermal_printer_width', '58')
     save_setting('thermal_printer_name', printer_name)
     save_setting('thermal_printer_width', printer_width)
+    # Bluetooth server-side printing removed; only save local thermal settings
     return redirect(url_for('admin'))
 
 @app.route('/reprint_thermal/<int:order_id>')
@@ -604,7 +956,7 @@ def add_recipe():
     
     conn.commit()
     conn.close()
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin', tab='recipe'))
 
 @app.route('/del_recipe/<int:rid>', methods=['POST'])
 @login_required
@@ -613,49 +965,17 @@ def del_recipe(rid):
     conn.execute("DELETE FROM menu_recipes WHERE id=?", (rid,))
     conn.commit()
     conn.close()
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin', tab='recipe'))
 
 @app.route('/reports')
 @login_required
 def reports():
-    conn = get_db_connection()
-    revenue = conn.execute("SELECT SUM(total) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
-    expenses = conn.execute("SELECT SUM(jumlah) FROM expenses WHERE is_archived=0").fetchone()[0] or 0
-    stocks = conn.execute("SELECT SUM(jumlah * qty) FROM input_stok WHERE is_archived=0").fetchone()[0] or 0
-    total_exp = expenses + stocks
-    profit = revenue - total_exp
-    
-    orders_count = conn.execute("SELECT COUNT(id) FROM orders WHERE status='selesai' AND is_archived=0").fetchone()[0] or 0
-    
-    # Chart Data
-    sales_raw = conn.execute("SELECT total, waktu FROM orders WHERE status='selesai'").fetchall()
-    daily_sales = {}
-    for s in sales_raw:
-        try:
-            d = s['waktu'].split(' ')[0]
-            daily_sales[d] = daily_sales.get(d, 0) + s['total']
-        except: pass
-    
-    today = datetime.now()
-    chart_labels = [(today - timedelta(days=i)).strftime("%d-%m-%Y") for i in range(29, -1, -1)]
-    chart_data = [daily_sales.get(l, 0) for l in chart_labels]
-    
-    # Archives
-    files = [f for f in os.listdir('.') if f.endswith('.xlsx') and f.startswith('Laporan_')]
-    archive_data = [{'nama_file': f, 'summary': {'total_pemasukan': 0}} for f in sorted(files, reverse=True)]
-    
-    conn.close()
-    return render_template('reports.html', total_revenue=revenue, expenses=total_exp, profit=profit,
-                           total_orders=orders_count, chart_labels=chart_labels, chart_data=chart_data,
-                           archive_data=archive_data)
+    return redirect(url_for('admin', tab='reports'))
 
 @app.route('/inventory')
 @login_required
 def inventory():
-    conn = get_db_connection()
-    materials = conn.execute("SELECT * FROM raw_materials").fetchall()
-    conn.close()
-    return render_template('inventory.html', materials=materials)
+    return redirect(url_for('admin', tab='inventory'))
 
 @app.route('/add_material', methods=['POST'])
 @login_required
@@ -667,7 +987,7 @@ def add_material():
     conn.execute("INSERT INTO raw_materials (nama, satuan, stok) VALUES (?, ?, ?)", (nama, satuan, stok))
     conn.commit()
     conn.close()
-    return redirect(url_for('inventory'))
+    return redirect(url_for('admin', tab='inventory'))
 
 @app.route('/update_material', methods=['POST'])
 @login_required
@@ -678,7 +998,16 @@ def update_material():
     conn.execute("UPDATE raw_materials SET stok = stok + ? WHERE id = ?", (tambah, mid))
     conn.commit()
     conn.close()
-    return redirect(url_for('inventory'))
+    return redirect(url_for('admin', tab='inventory'))
+
+@app.route('/del_material/<int:mid>', methods=['POST'])
+@login_required
+def del_material(mid):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM raw_materials WHERE id = ?", (mid,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin', tab='inventory'))
 
 @app.route('/add_menu', methods=['POST'])
 @login_required
@@ -700,12 +1029,15 @@ def add_menu():
     has_variant = 1 if request.form.get('has_variant') else 0
     variants_json = request.form.get('variants_json', '[]')
     diskon = int(request.form.get('diskon', 0))
+    show_on_tv = 1 if request.form.get('show_on_tv') else 0
+    deskripsi = request.form.get('deskripsi', '')
+    
     conn = get_db_connection()
-    conn.execute("INSERT INTO menus (nama, harga, kategori, gambar, has_opt, diskon, has_note, has_variant, variants_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                 (nama, harga, kategori, gambar, has_opt, diskon, has_note, has_variant, variants_json))
+    conn.execute("INSERT INTO menus (nama, harga, kategori, gambar, has_opt, diskon, has_note, has_variant, variants_json, show_on_tv, deskripsi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 (nama, harga, kategori, gambar, has_opt, diskon, has_note, has_variant, variants_json, show_on_tv, deskripsi))
     conn.commit()
     conn.close()
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin', tab='menu'))
 
 @app.route('/update_menu', methods=['POST'])
 @login_required
@@ -720,19 +1052,22 @@ def update_menu():
     has_variant = 1 if request.form.get('has_variant') else 0
     variants_json = request.form.get('variants_json', '[]')
     diskon = int(request.form.get('diskon', 0))
+    show_on_tv = 1 if request.form.get('show_on_tv') else 0
+    deskripsi = request.form.get('deskripsi', '')
+    
     conn = get_db_connection()
     if 'gambar' in request.files and request.files['gambar'].filename != '':
         file = request.files['gambar']
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        conn.execute("UPDATE menus SET nama=?, harga=?, kategori=?, gambar=?, has_opt=?, diskon=?, has_note=?, has_variant=?, variants_json=? WHERE id=?",
-                     (nama, harga, kategori, filename, has_opt, diskon, has_note, has_variant, variants_json, mid))
+        conn.execute("UPDATE menus SET nama=?, harga=?, kategori=?, gambar=?, has_opt=?, diskon=?, has_note=?, has_variant=?, variants_json=?, show_on_tv=?, deskripsi=? WHERE id=?",
+                     (nama, harga, kategori, filename, has_opt, diskon, has_note, has_variant, variants_json, show_on_tv, deskripsi, mid))
     else:
-        conn.execute("UPDATE menus SET nama=?, harga=?, kategori=?, has_opt=?, diskon=?, has_note=?, has_variant=?, variants_json=? WHERE id=?",
-                     (nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants_json, mid))
+        conn.execute("UPDATE menus SET nama=?, harga=?, kategori=?, has_opt=?, diskon=?, has_note=?, has_variant=?, variants_json=?, show_on_tv=?, deskripsi=? WHERE id=?",
+                     (nama, harga, kategori, has_opt, diskon, has_note, has_variant, variants_json, show_on_tv, deskripsi, mid))
     conn.commit()
     conn.close()
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin', tab='menu'))
 
 @app.route('/del_menu/<int:mid>', methods=['POST'])
 @login_required
@@ -741,7 +1076,7 @@ def del_menu(mid):
     conn.execute("DELETE FROM menus WHERE id=?", (mid,))
     conn.commit()
     conn.close()
-    return redirect(url_for('admin'))
+    return redirect(url_for('admin', tab='menu'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -768,18 +1103,41 @@ def signup():
         fullname = request.form.get('fullname')
         username = request.form.get('username')
         password = request.form.get('password')
-        if not fullname or not username or not password:
+        verification = request.form.get('verification')
+
+        if not fullname or not username or not password or not verification:
             return "Semua field harus diisi", 400
+
+        # Verifikasi pertanyaan
+        if verification.strip().lower() != "allah":
+            return "Jawaban verifikasi salah", 400
+
         conn = get_db_connection()
-        exists = conn.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone()
+
+        exists = conn.execute(
+            "SELECT 1 FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+
         if exists:
             conn.close()
             return "Username sudah digunakan", 400
-        conn.execute("INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
-                     (username, generate_password_hash(password), 'crew', fullname))
+
+        conn.execute(
+            "INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
+            (
+                username,
+                generate_password_hash(password),
+                'crew',
+                fullname
+            )
+        )
+
         conn.commit()
         conn.close()
+
         return redirect(url_for('login'))
+
     return render_template('signup.html')
 
 @app.route('/logout')
@@ -790,10 +1148,7 @@ def logout():
 @app.route('/membership')
 @login_required
 def membership():
-    conn = get_db_connection()
-    members = conn.execute("SELECT * FROM membership ORDER BY created_at DESC").fetchall()
-    conn.close()
-    return render_template('membership.html', members=members)
+    return redirect(url_for('admin', tab='membership'))
 
 @app.route('/register_membership', methods=['POST'])
 @login_required
@@ -845,7 +1200,7 @@ def register_membership():
     
     conn.commit()
     conn.close()
-    return redirect(url_for('membership'))
+    return redirect(url_for('admin', tab='membership'))
 
 @app.route('/membership_lookup/<member_number>')
 def membership_lookup(member_number):
@@ -866,12 +1221,12 @@ def membership_lookup(member_number):
     member = None
     try:
         member = conn.execute(
-            "SELECT id, nama, nomor_member, nomor_telepon FROM membership WHERE nomor_telepon=? OR nomor_member=?",
+            "SELECT id, nama, nomor_member, nomor_telepon, saldo_cashback FROM membership WHERE nomor_telepon=? OR nomor_member=?",
             (member_number_clean, member_number_clean)
         ).fetchone()
     except sqlite3.OperationalError:
         member = conn.execute(
-            "SELECT id, nama, nomor_member FROM membership WHERE nomor_member=?",
+            "SELECT id, nama, nomor_member, saldo_cashback FROM membership WHERE nomor_member=?",
             (member_number_clean,)
         ).fetchone()
     conn.close()
@@ -883,7 +1238,8 @@ def membership_lookup(member_number):
         'found': True,
         'id': member['id'],
         'nama': member['nama'],
-        'nomor_member': member['nomor_member']
+        'nomor_member': member['nomor_member'],
+        'saldo_cashback': member['saldo_cashback'] if 'saldo_cashback' in member.keys() else 0
     })
 
 @app.route('/print_membership_card/<int:member_id>')
@@ -1088,8 +1444,8 @@ def print_membership_card(member_id):
                 
                 <div class="footer">
                     <div>
-                        <div class="points-label">POIN</div>
-                        <div class="points">{member['poin']}</div>
+                        <div class="points-label">SALDO CASHBACK</div>
+                        <div class="points">Rp {f"{member['saldo_cashback'] or 0:,}".replace(",", ".")}</div>
                     </div>
                     <div class="valid-date">
                         <div class="valid-date-label">Since</div>
@@ -1133,16 +1489,22 @@ def redeem_points(member_id, points, reward_type):
 @login_required
 def add_membership_to_order(order_id, member_id):
     conn = get_db_connection()
-    order = conn.execute("SELECT total FROM orders WHERE id=?", (order_id,)).fetchone()
+    order = conn.execute("SELECT total, status FROM orders WHERE id=?", (order_id,)).fetchone()
     if not order:
         conn.close()
         return "Order tidak ditemukan", 400
     
-    # Calculate points: minimum Rp65.000 = 1 point, tidak berlaku kelipatan
-    if order['total'] >= 65000:
-        points = 1
-        conn.execute("UPDATE orders SET membership_id=?, points_earned=? WHERE id=?", (member_id, points, order_id))
-        conn.execute("UPDATE membership SET poin = poin + ? WHERE id=?", (points, member_id))
+    total = order['total']
+    status = order['status']
+    cashback_earned = calculate_cashback(total)
+    
+    if cashback_earned > 0:
+        conn.execute("UPDATE orders SET membership_id=?, cashback_earned=? WHERE id=?", (member_id, cashback_earned, order_id))
+        # Hanya kreditkan cashback ke saldo member jika pesanan sudah dibayar
+        if status != 'belum_bayar':
+            conn.execute("UPDATE membership SET saldo_cashback = saldo_cashback + ? WHERE id=?", (cashback_earned, member_id))
+    else:
+        conn.execute("UPDATE orders SET membership_id=? WHERE id=?", (member_id, order_id))
     
     conn.commit()
     conn.close()
@@ -1188,7 +1550,361 @@ def archive():
     conn.execute("UPDATE input_stok SET is_archived=1")
     conn.commit()
     conn.close()
+    
+    # 4. Reset archive cache so chart picks up the new file next visit
+    global archive_cache
+    archive_cache = {}
+    
     return redirect(url_for('admin'))
+
+@app.route('/add_expense', methods=['POST'])
+@login_required
+def add_expense():
+    keterangan = request.form.get('keterangan')
+    jumlah = request.form.get('jumlah')
+    source = request.form.get('source', 'Kasir')
+    waktu = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    
+    conn = get_db_connection()
+    conn.execute("INSERT INTO expenses (keterangan, jumlah, waktu, source) VALUES (?, ?, ?, ?)", (keterangan, jumlah, waktu, source))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin', tab='reports'))
+
+@app.route('/download_archive/<filename>')
+@login_required
+def download_archive(filename):
+    if not filename.endswith('.xlsx') or not filename.startswith('Laporan_'):
+        return "Invalid file", 400
+    try:
+        from flask import send_from_directory
+        import os
+        return send_from_directory(os.path.abspath('.'), filename, as_attachment=True)
+    except Exception as e:
+        return str(e), 404
+
+@app.route('/display/menu')
+def display_menu_only():
+    conn = get_db_connection()
+    menus = conn.execute("SELECT * FROM menus WHERE show_on_tv=1 ORDER BY kategori, nama").fetchall()
+    conn.close()
+    return render_template('display_menu.html', menus=menus)
+
+@app.route('/display/queue')
+def display_queue_only():
+    return render_template('display_queue.html')
+
+@app.route('/api/active_orders')
+def api_active_orders():
+    conn = get_db_connection()
+    orders = conn.execute(
+        "SELECT id, meja, pelanggan, status FROM orders WHERE is_archived=0 AND status IN ('belum_bayar', 'pending', 'siap') ORDER BY id ASC"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(o) for o in orders])
+
+@app.route('/call/<int:order_id>', methods=['POST'])
+@login_required
+def call_order(order_id):
+    conn = get_db_connection()
+    conn.execute("UPDATE orders SET status='siap' WHERE id=?", (order_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/order/<int:order_id>')
+@login_required
+def api_order_detail(order_id):
+    conn = get_db_connection()
+    order = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+    conn.close()
+    if not order:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(dict(order))
+
+@app.route('/api/orders_dashboard')
+@login_required
+def api_orders_dashboard():
+    conn = get_db_connection()
+    active = conn.execute(
+        "SELECT id, meja, pelanggan, status, menu, waktu, total FROM orders "
+        "WHERE is_archived=0 AND status NOT IN ('selesai') ORDER BY id ASC"
+    ).fetchall()
+    selesai_count = conn.execute(
+        "SELECT COUNT(*) FROM orders WHERE is_archived=0 AND status='selesai'"
+    ).fetchone()[0]
+    conn.close()
+    return jsonify({
+        'orders': [dict(o) for o in active],
+        'selesai_count': selesai_count
+    })
+
+@app.route('/api/scan_printers')
+@login_required
+def api_scan_printers():
+    import re
+    ports = serial.tools.list_ports.comports()
+    printers = []
+    seen_macs = set()
+    for p in ports:
+        hwid = p.hwid or ''
+        desc = p.description or ''
+        if 'BTHENUM' not in hwid:
+            continue
+        # Extract 12-hex MAC from HWID (works for both LOCALMFG and VID patterns)
+        m = re.search(r'[&\\]([0-9A-Fa-f]{12})_', hwid)
+        if not m:
+            continue
+        raw = m.group(1)
+        if raw == '000000000000':
+            continue  # Skip generic/anonymous ports
+        mac_formatted = ':'.join([raw[i:i+2] for i in range(0, 12, 2)]).upper()
+        if mac_formatted in seen_macs:
+            continue
+        seen_macs.add(mac_formatted)
+        printers.append({
+            'port': p.device,
+            'name': desc if desc else 'Bluetooth Printer',
+            'mac': mac_formatted,
+            'hwid': hwid
+        })
+    return jsonify({'printers': printers})
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+@login_required
+def api_settings():
+    conn = get_db_connection()
+    if request.method == 'POST':
+        data = request.json
+        if not data:
+            conn.close()
+            return jsonify({'error': 'No data'}), 400
+        for key, value in data.items():
+            conn.execute("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=?", (key, value, value))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    else:
+        settings = conn.execute("SELECT key, value FROM settings").fetchall()
+        conn.close()
+        return jsonify({s['key']: s['value'] for s in settings})
+
+@app.route('/api/print_receipt', methods=['POST'])
+@login_required
+def api_print_receipt():
+    import socket as _socket
+    import re
+    data = request.json
+    if not data or 'bytes' not in data:
+        return jsonify({'error': 'No bytes provided'}), 400
+    
+    receipt_bytes = bytes(data['bytes'])
+    
+    conn = get_db_connection()
+    printer_mac_row = conn.execute("SELECT value FROM settings WHERE key='printer_mac'").fetchone()
+    conn.close()
+    
+    if not printer_mac_row or not printer_mac_row['value']:
+        return jsonify({'error': 'Printer belum dikonfigurasi di Settings'}), 400
+    
+    target_mac = printer_mac_row['value']  # e.g. "86:67:7A:4F:71:8B"
+    mac_clean = target_mac.replace(':', '').replace('-', '').upper()
+    
+    # ── Strategy 1: Find COM port matching the MAC and write directly ──
+    target_port = None
+    ports = serial.tools.list_ports.comports()
+    for p in ports:
+        hwid = p.hwid or ''
+        m = re.search(r'[&\\]([0-9A-Fa-f]{12})_', hwid)
+        if m and m.group(1).upper() == mac_clean:
+            target_port = p.device
+            break
+    
+    if target_port:
+        try:
+            with serial.Serial(target_port, 9600, timeout=5, write_timeout=5) as ser:
+                ser.write(receipt_bytes)
+            print(f'[BT Print] Success via {target_port}')
+            return jsonify({'success': True, 'method': 'serial_com', 'port': target_port})
+        except Exception as e:
+            print(f'[BT Print] COM {target_port} failed ({e}), trying BT socket...')
+    
+    # ── Strategy 2: Direct Bluetooth RFCOMM socket ──
+    bt_sock = None
+    try:
+        bt_sock = _socket.socket(_socket.AF_BLUETOOTH, _socket.SOCK_STREAM, _socket.BTPROTO_RFCOMM)
+        bt_sock.settimeout(8)
+        bt_sock.connect((target_mac, 1))
+        bt_sock.sendall(receipt_bytes)
+        bt_sock.close()
+        print(f'[BT Print] Success via BT socket to {target_mac}')
+        return jsonify({'success': True, 'method': 'bluetooth_socket', 'mac': target_mac})
+    except Exception as e:
+        print(f'[BT Print] BT socket also failed: {e}')
+        if bt_sock:
+            try: bt_sock.close()
+            except: pass
+    
+    return jsonify({'error': f'Gagal cetak ke {target_mac}. Pastikan printer menyala dan terhubung ke server.'}), 500
+
+# ===== ABSENSI & UPAH KARYAWAN (Halaman Tersembunyi) =====
+
+@app.route('/absensi')
+@login_required
+def absensi():
+    conn = get_db_connection()
+    employees = conn.execute("SELECT * FROM employees ORDER BY aktif DESC, nama").fetchall()
+    
+    today_str = datetime.now().strftime("%d-%m-%Y")
+    today_attendance = conn.execute("SELECT * FROM attendance WHERE tanggal=?", (today_str,)).fetchall()
+    today_map = {a['employee_id']: dict(a) for a in today_attendance}
+    
+    for eid, data in today_map.items():
+        if data.get('waktu_masuk'):
+            try:
+                if data.get('status') == 'hadir_double':
+                    data['shift'] = "Double Shift (1 & 2)"
+                else:
+                    h = int(data['waktu_masuk'].split(':')[0])
+                    if 6 <= h < 17:
+                        data['shift'] = "Shift 1"
+                    else:
+                        data['shift'] = "Shift 2"
+            except:
+                data['shift'] = ""
+    
+    # Monthly summary
+    now = datetime.now()
+    month_str = now.strftime("%m-%Y")
+    
+    monthly_summary = []
+    for emp in employees:
+        if not emp['aktif']:
+            continue
+        records = conn.execute(
+            "SELECT status FROM attendance WHERE employee_id=? AND tanggal LIKE ?",
+            (emp['id'], f'%-{month_str}')
+        ).fetchall()
+        # Add upah_bulanan if it doesn't exist
+        try:
+            conn.execute("ALTER TABLE employees ADD COLUMN upah_bulanan INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+
+        hadir = sum(1 for r in records if r['status'] == 'hadir')
+        hadir_double = sum(1 for r in records if r['status'] == 'hadir_double')
+        izin = sum(1 for r in records if r['status'] == 'izin')
+        alpha = sum(1 for r in records if r['status'] == 'alpha')
+        upah_bulanan = emp['upah_bulanan'] if 'upah_bulanan' in emp.keys() else 0
+        upah_harian_calc = upah_bulanan // 30 if upah_bulanan > 0 else emp['upah_harian']
+        
+        # Calculate total upah (Double shift counts as 2 days of work/wage)
+        total_upah = (hadir + (hadir_double * 2)) * upah_harian_calc
+        
+        monthly_summary.append({
+            'id': emp['id'],
+            'nama': emp['nama'],
+            'posisi': emp['posisi'],
+            'upah_harian': upah_harian_calc,
+            'upah_bulanan': upah_bulanan,
+            'hadir': hadir + (hadir_double * 2), # Show equivalent shifts
+            'izin': izin,
+            'alpha': alpha,
+            'total_upah': total_upah
+        })
+    
+    conn.close()
+    return render_template('absensi.html', employees=employees, today_map=today_map,
+                           today_str=today_str, monthly_summary=monthly_summary,
+                           bulan=now.strftime("%B %Y"))
+
+@app.route('/add_employee', methods=['POST'])
+@login_required
+def add_employee():
+    nama = request.form.get('nama')
+    posisi = request.form.get('posisi')
+    upah_bulanan = int(request.form.get('upah_bulanan', 0) or 0)
+    tanggal_masuk = request.form.get('tanggal_masuk', datetime.now().strftime("%d-%m-%Y"))
+    upah_harian = upah_bulanan // 30
+    conn = get_db_connection()
+    try:
+        conn.execute("ALTER TABLE employees ADD COLUMN upah_bulanan INTEGER DEFAULT 0")
+    except: pass
+    try:
+        conn.execute("ALTER TABLE employees ADD COLUMN tanggal_masuk TEXT")
+    except: pass
+    conn.execute("INSERT INTO employees (nama, posisi, upah_harian, upah_bulanan, tanggal_masuk) VALUES (?, ?, ?, ?, ?)", 
+                 (nama, posisi, upah_harian, upah_bulanan, tanggal_masuk))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('absensi'))
+
+@app.route('/edit_employee/<int:eid>', methods=['POST'])
+@login_required
+def edit_employee(eid):
+    nama = request.form.get('nama')
+    posisi = request.form.get('posisi')
+    upah_bulanan = int(request.form.get('upah_bulanan', 0) or 0)
+    tanggal_masuk = request.form.get('tanggal_masuk', '')
+    upah_harian = upah_bulanan // 30
+    conn = get_db_connection()
+    try:
+        conn.execute("ALTER TABLE employees ADD COLUMN upah_bulanan INTEGER DEFAULT 0")
+    except: pass
+    try:
+        conn.execute("ALTER TABLE employees ADD COLUMN tanggal_masuk TEXT")
+    except: pass
+    if tanggal_masuk:
+        conn.execute("UPDATE employees SET nama=?, posisi=?, upah_harian=?, upah_bulanan=?, tanggal_masuk=? WHERE id=?", 
+                     (nama, posisi, upah_harian, upah_bulanan, tanggal_masuk, eid))
+    else:
+        conn.execute("UPDATE employees SET nama=?, posisi=?, upah_harian=?, upah_bulanan=? WHERE id=?", 
+                     (nama, posisi, upah_harian, upah_bulanan, eid))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('absensi'))
+
+@app.route('/toggle_employee/<int:eid>', methods=['POST'])
+@login_required
+def toggle_employee(eid):
+    conn = get_db_connection()
+    emp = conn.execute("SELECT aktif FROM employees WHERE id=?", (eid,)).fetchone()
+    new_status = 0 if emp['aktif'] else 1
+    conn.execute("UPDATE employees SET aktif=? WHERE id=?", (new_status, eid))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('absensi'))
+
+@app.route('/delete_employee/<int:eid>', methods=['POST'])
+@login_required
+def delete_employee(eid):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM attendance WHERE employee_id=?", (eid,))
+    conn.execute("DELETE FROM employees WHERE id=?", (eid,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('absensi'))
+
+@app.route('/record_attendance', methods=['POST'])
+@login_required
+def record_attendance():
+    employee_id = request.form.get('employee_id')
+    status = request.form.get('status')
+    tanggal = request.form.get('tanggal', datetime.now().strftime("%d-%m-%Y"))
+    waktu_masuk = datetime.now().strftime("%H:%M:%S") if status in ['hadir', 'hadir_double'] else ''
+    catatan = request.form.get('catatan', '')
+    
+    conn = get_db_connection()
+    existing = conn.execute("SELECT id FROM attendance WHERE employee_id=? AND tanggal=?", (employee_id, tanggal)).fetchone()
+    if existing:
+        conn.execute("UPDATE attendance SET status=?, waktu_masuk=?, catatan=? WHERE id=?",
+                      (status, waktu_masuk, catatan, existing['id']))
+    else:
+        conn.execute("INSERT INTO attendance (employee_id, tanggal, status, waktu_masuk, catatan) VALUES (?, ?, ?, ?, ?)",
+                      (employee_id, tanggal, status, waktu_masuk, catatan))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('absensi'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
