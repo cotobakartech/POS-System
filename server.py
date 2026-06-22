@@ -12,9 +12,9 @@ if __name__ == "__main__":
     serve(
         app, 
         host='0.0.0.0', 
-        port=80, 
+        port=8080, 
         threads=12,              # Menangani hingga 12 proses sekaligus
         connection_limit=200,    # Batas koneksi masuk
         channel_timeout=30,      # Timeout untuk membebaskan koneksi yang menggantung
         url_scheme='http'
-    )
+    )

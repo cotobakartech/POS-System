@@ -17,10 +17,18 @@ from pdf_generator import generate_report_pdf
 import serial
 import serial.tools.list_ports
 import base64
+
+# Path absolut root project — supaya file Excel & DB selalu ditemukan
+# terlepas dari working directory saat server dijalankan
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'pos_system_ultra_secure_key_2026')
-app.config['UPLOAD_FOLDER'] = 'static/menu'
-DATABASE = 'possystem.db'
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'menu')
+DATABASE = os.path.join(BASE_DIR, 'possystem.db')
+
+# Cache arsip Excel di module-level (bukan di dalam fungsi)
+archive_cache = {}
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
@@ -493,14 +501,11 @@ def admin():
     unarchived_expenses = conn.execute("SELECT jumlah, waktu FROM expenses WHERE is_archived=0").fetchall()
     unarchived_stocks = conn.execute("SELECT jumlah, qty, waktu FROM input_stok WHERE is_archived=0").fetchall()
     
-    # Archives
-    files = [f for f in os.listdir('.') if f.endswith('.xlsx') and f.startswith('Laporan_')]
+    # Archives — gunakan BASE_DIR agar selalu ditemukan walau CWD berbeda
+    files = [f for f in os.listdir(BASE_DIR) if f.endswith('.xlsx') and f.startswith('Laporan_')]
     archive_data = []
-    
-    # Use a global dictionary to cache read Excel files for performance
+
     global archive_cache
-    if 'archive_cache' not in globals():
-        archive_cache = {}
 
     totals = {
         'hari_ini': {'revenue': 0, 'expense': 0, 'profit': 0},
@@ -554,31 +559,51 @@ def admin():
         if f not in archive_cache:
             t_rev = 0
             t_exp = 0
+            items_sold = {}
+            fpath = os.path.join(BASE_DIR, f)  # path absolut ke file Excel
             try:
                 # Read Revenue
                 try:
-                    df = pd.read_excel(f, sheet_name='Pemasukan')
+                    df = pd.read_excel(fpath, sheet_name='Pemasukan')
                     if 'total' in df.columns:
                         t_rev = int(df['total'].sum())
+                    if 'menu' in df.columns:
+                        for _, row in df.iterrows():
+                            if pd.notna(row['menu']):
+                                items = str(row['menu']).split(' | ')
+                                for item in items:
+                                    parts = item.split('\n')
+                                    if len(parts) >= 2:
+                                        nama = parts[0].strip()
+                                        subparts = parts[1].strip().split()
+                                        if len(subparts) >= 3:
+                                            try:
+                                                qty = int(subparts[0])
+                                                subtotal = float(subparts[-1])
+                                                if nama not in items_sold:
+                                                    items_sold[nama] = {'qty': 0, 'revenue': 0}
+                                                items_sold[nama]['qty'] += qty
+                                                items_sold[nama]['revenue'] += subtotal
+                                            except: pass
                 except: pass
-                
+
                 # Read Expenses
                 try:
-                    df_exp = pd.read_excel(f, sheet_name='Pengeluaran')
+                    df_exp = pd.read_excel(fpath, sheet_name='Pengeluaran')
                     if 'jumlah' in df_exp.columns:
                         t_exp += int(df_exp['jumlah'].sum())
                 except: pass
-                
+
                 # Read Stocks
                 try:
-                    df_stok = pd.read_excel(f, sheet_name='Stok')
+                    df_stok = pd.read_excel(fpath, sheet_name='Stok')
                     if 'jumlah' in df_stok.columns and 'qty' in df_stok.columns:
                         t_exp += int((df_stok['jumlah'] * df_stok['qty']).sum())
                 except: pass
-                
+
             except Exception as e:
                 pass
-            archive_cache[f] = {'revenue': t_rev, 'expense': t_exp}
+            archive_cache[f] = {'revenue': t_rev, 'expense': t_exp, 'items_sold': items_sold}
         
         # Aggregate archived data into totals
         try:
@@ -682,6 +707,29 @@ def admin():
                                 bs[period_key][nama] = {'qty': 0, 'revenue': 0}
                             bs[period_key][nama]['qty'] += qty
                             bs[period_key][nama]['revenue'] += subtotal
+            except: pass
+    # Add archived items to bestsellers
+    for f in files:
+        if f in archive_cache and 'items_sold' in archive_cache[f]:
+            try:
+                date_str = f[8:16]
+                if len(date_str) == 8:
+                    d = f"{date_str[6:8]}-{date_str[4:6]}-{date_str[0:4]}"
+                    m = f"{date_str[4:6]}-{date_str[0:4]}"
+                    y = f"{date_str[0:4]}"
+                    for nama, data in archive_cache[f]['items_sold'].items():
+                        qty = data['qty']
+                        subtotal = data['revenue']
+                        
+                        if d == today_str:
+                            items_sold_today[nama] = items_sold_today.get(nama, 0) + qty
+
+                        for period_key, match in [('hari', d == today_str), ('bulan', m == this_month_str), ('tahun', y == this_year_str), ('semua', True)]:
+                            if match:
+                                if nama not in bs[period_key]:
+                                    bs[period_key][nama] = {'qty': 0, 'revenue': 0}
+                                bs[period_key][nama]['qty'] += qty
+                                bs[period_key][nama]['revenue'] += subtotal
             except: pass
 
     items_sold_today = dict(sorted(items_sold_today.items(), key=lambda x: x[1], reverse=True))
@@ -1533,9 +1581,10 @@ def archive():
         conn.close()
         return redirect(url_for('admin'))
         
-    # 2. Buat Excel (Sederhana)
+    # 2. Buat Excel — simpan ke BASE_DIR agar selalu ditemukan
     filename = f"Laporan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    with pd.ExcelWriter(filename) as writer:
+    filepath = os.path.join(BASE_DIR, filename)
+    with pd.ExcelWriter(filepath) as writer:
         if orders:
             df_orders = pd.DataFrame(orders, columns=orders[0].keys())
             # Pilih dan urutkan kolom yang relevan untuk laporan
@@ -1577,9 +1626,7 @@ def download_archive(filename):
     if not filename.endswith('.xlsx') or not filename.startswith('Laporan_'):
         return "Invalid file", 400
     try:
-        from flask import send_from_directory
-        import os
-        return send_from_directory(os.path.abspath('.'), filename, as_attachment=True)
+        return send_from_directory(BASE_DIR, filename, as_attachment=True)
     except Exception as e:
         return str(e), 404
 
